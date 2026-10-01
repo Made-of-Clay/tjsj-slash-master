@@ -20,7 +20,7 @@
   "devDependencies": {
     "@types/stats": "^0.16.30",
     "@types/stats.js": "^0.17.4",
-    "@types/three": "^0.185.0",
+    "@types/three": "^0.186.0",
     "oxfmt": "^0.62.0",
     "oxlint": "^1.72.0",
     "typescript": "^7.0.2",
