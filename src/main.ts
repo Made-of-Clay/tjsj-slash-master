@@ -1,10 +1,10 @@
 import {
-  BoxGeometry,
-  Mesh,
-  Timer,
-  MeshLambertMaterial,
-  PCFSoftShadowMap,
-  WebGLRenderer,
+    BoxGeometry,
+    Mesh,
+    Timer,
+    MeshLambertMaterial,
+    PCFSoftShadowMap,
+    WebGLRenderer,
 } from 'three';
 import Stats from 'stats.js';
 import { registerSW } from 'virtual:pwa-register';
@@ -39,12 +39,7 @@ addLights();
 
 // Dummy Object
 // TODO remove this object
-scene.add(
-  new Mesh(
-    new BoxGeometry(1, 1, 1),
-    new MeshLambertMaterial({ color: 'white' }),
-  ),
-);
+scene.add(new Mesh(new BoxGeometry(1, 1, 1), new MeshLambertMaterial({ color: 'white' })));
 
 const camera = new ProjectCamera(canvas);
 scene.add(camera.instance);
@@ -59,18 +54,18 @@ const timer = new Timer();
 timer.connect(document);
 
 function tick(timestamp: number) {
-  requestAnimationFrame(tick);
+    requestAnimationFrame(tick);
 
-  stats.begin();
+    stats.begin();
 
-  timer.update(timestamp);
-  const delta = timer.getDelta();
-  console.log('delta', delta);
+    timer.update(timestamp);
+    const delta = timer.getDelta();
+    console.log('delta', delta);
 
-  camera.tick(renderer);
+    camera.tick(renderer);
 
-  renderer.render(scene, camera.instance);
-  stats.end();
+    renderer.render(scene, camera.instance);
+    stats.end();
 }
 
 tick(0);

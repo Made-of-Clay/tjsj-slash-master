@@ -11,4 +11,3 @@ Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log
 - `firebase.json`: `no-cache` on `sw.js` + manifest, immutable on hashed assets.
 - Fix: `pnpm build` was already broken at HEAD — unused `#cameraFolder` private field tripped `noUnusedLocals`. CI deploy was failing too.
 - Caveat: keep `workbox-window` an explicit devDep. pnpm's auto-installed peer isn't resolvable by Rolldown, so the build fails without it.
-
