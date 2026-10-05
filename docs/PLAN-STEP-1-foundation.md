@@ -95,14 +95,20 @@ export class GameLoop {
   constructor(hooks: LoopHooks, options?: LoopOptions);
   start(): void;
   stop(): void;
-  readonly running: boolean;
+  dispose(): void;
+  tick(timestamp: number): void; // passed to renderer.setAnimationLoop
+  readonly running: boolean; // caller intent
+  readonly paused: boolean; // hidden-tab suppression
+  readonly active: boolean; // running && !paused
   readonly fps: number; // EMA, 0 while stopped
 }
 ```
 
 - `renderer.setAnimationLoop` drives it; no second rAF loop in the app.
 - Accumulator + clamp. Without `maxSubSteps`, a long stall (backgrounded tab, GC) produces a catch-up spiral and the tab locks up.
-- `visibilitychange` → `stop()`; back in view → `start()`. Backgrounded tabs must not render (PLAN.md step 8).
+- `visibilitychange` sets `paused`, and is registered **once in the constructor** rather than in `start()`/`stop()`. Binding it to start/stop means the first auto-pause unregisters the listener that has to resume the loop, leaving the tab frozen forever after one background.
+- Pausing and `stop()` both discard the accumulator, so resuming never replays missed steps.
+- `tick` is an arrow field, so `loop.tick` can go straight to `setAnimationLoop` with no `bind` allocation.
 - No allocation in the hot path: accumulator, EMA state, and step bookkeeping are instance fields, not locals recreated per frame.
 
 ### `game/Input.ts`
