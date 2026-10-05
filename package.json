@@ -1,5 +1,5 @@
 {
-  "name": "threejs-starter-vite",
+  "name": "slash-master",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -15,12 +15,10 @@
     "fmt:check": "oxfmt --check"
   },
   "dependencies": {
-    "lil-gui": "^0.21.0",
     "stats.js": "^0.17.0",
     "three": "^0.185.1"
   },
   "devDependencies": {
-    "@types/stats": "^0.16.30",
     "@types/stats.js": "^0.17.4",
     "@types/three": "^0.185.0",
     "oxfmt": "^0.62.0",

@@ -1,71 +1,77 @@
-import {
-    BoxGeometry,
-    Mesh,
-    Timer,
-    MeshLambertMaterial,
-    PCFSoftShadowMap,
-    WebGLRenderer,
-} from 'three';
-import Stats from 'stats.js';
+import { WebGPURenderer } from 'three/webgpu';
 import { registerSW } from 'virtual:pwa-register';
 import './style.css';
-import { addLights } from './addLights';
-import { addHelpers } from './addHelpers';
-import { getScene } from './getScene';
-import { ProjectCamera } from './ProjectCamera';
+import { MAX_PIXEL_RATIO } from './config';
+import { GameLoop } from './game/GameLoop';
+import { Input } from './game/Input';
+import { createCamera, createSwipeProjector, createViewportSync } from './rendering/Camera';
+import { createPlaceholder } from './rendering/placeholder';
+import { createScene } from './rendering/Scene';
+import { createUiRoot } from './ui/root';
 
 // No-op without a service worker, so this is safe in dev as well.
 registerSW({ immediate: true });
 
-const canvas = document.createElement('canvas');
-document.body.appendChild(canvas);
-const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = PCFSoftShadowMap;
-const scene = getScene();
+async function boot(): Promise<void> {
+    const canvas = document.createElement('canvas');
+    document.body.appendChild(canvas);
 
-/*
--- Example Usage --
-const loadingManager = getLoadingManager();
-const cheese: Promise<GLTF> = new Promise((resolve, reject) => {
-    const loader = new GLTFLoader(loadingManager);
-    loader.load('/models/cheese.glb', resolve, undefined, reject);
-});
-cheese.then((gltf) => scene.add(gltf.scene)).catch(console.error);
-*/
+    const renderer = new WebGPURenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
 
-addLights();
+    // WebGPU device creation is async. Rendering before this resolves produces
+    // empty frames, so nothing else may start until it lands.
+    await renderer.init();
 
-// Dummy Object
-// TODO remove this object
-scene.add(new Mesh(new BoxGeometry(1, 1, 1), new MeshLambertMaterial({ color: 'white' })));
+    // WebGPU where available, WebGL2 fallback otherwise — worth logging, since
+    // the two backends do not behave identically.
+    console.info(`backend: ${renderer.backend.constructor.name}`);
 
-const camera = new ProjectCamera(canvas);
-scene.add(camera.instance);
+    const scene = createScene();
+    scene.add(createPlaceholder());
 
-addHelpers();
+    const camera = createCamera(canvas.clientWidth / canvas.clientHeight);
+    const syncViewport = createViewportSync(renderer, camera);
+    syncViewport();
 
-// ===== 📈 STATS & CLOCK =====
-const stats = new Stats();
-document.body.appendChild(stats.dom);
+    createUiRoot();
 
-const timer = new Timer();
-timer.connect(document);
+    const input = new Input(canvas, createSwipeProjector(camera));
 
-function tick(timestamp: number) {
-    requestAnimationFrame(tick);
+    // Dev probe: proves pointer events reach the world-space projection. Step 4
+    // replaces it with collision tests.
+    if (import.meta.env.DEV) {
+        input.onSwipe(({ from, to }) => {
+            console.info(
+                `swipe ${from.x.toFixed(2)},${from.y.toFixed(2)} -> ${to.x.toFixed(2)},${to.y.toFixed(2)}`,
+            );
+        });
+    }
 
-    stats.begin();
+    // Dev-only overlay. Vite drops the whole block from the production build,
+    // so it never reaches the service worker's precache.
+    const stats = import.meta.env.DEV ? new (await import('stats.js')).default() : undefined;
+    if (stats) {
+        document.body.appendChild(stats.dom);
+    }
 
-    timer.update(timestamp);
-    const delta = timer.getDelta();
-    console.log('delta', delta);
+    const loop = new GameLoop({
+        // Empty until step 3 gives the simulation something to advance.
+        fixedUpdate: () => {},
+        render: () => {
+            stats?.begin();
+            syncViewport();
+            renderer.render(scene, camera);
+            stats?.end();
+        },
+    });
 
-    camera.tick(renderer);
+    // The renderer owns the only frame loop in the app.
+    renderer.setAnimationLoop(loop.tick);
 
-    renderer.render(scene, camera.instance);
-    stats.end();
+    loop.start();
 }
 
-tick(0);
+void boot().catch((error: unknown) => {
+    console.error('boot failed', error);
+});

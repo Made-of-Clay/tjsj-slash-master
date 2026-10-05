@@ -57,6 +57,16 @@ canvas {
     );
 }
 
+.ui-root {
+    /* Overlay layer for the HUD. Empty in step 1; widgets arrive in step 6. */
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+
+    /* Already padded for the notch, so step 6's widgets inherit it. */
+    padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+
 h1 {
     font-size: 3.2em;
     line-height: 1.1;

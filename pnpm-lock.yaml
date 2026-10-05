@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      lil-gui:
-        specifier: ^0.21.0
-        version: 0.21.0
       stats.js:
         specifier: ^0.17.0
         version: 0.17.0
@@ -18,9 +15,6 @@ importers:
         specifier: ^0.185.1
         version: 0.185.1
     devDependencies:
-      '@types/stats':
-        specifier: ^0.16.30
-        version: 0.16.30
       '@types/stats.js':
         specifier: ^0.17.4
         version: 0.17.4
@@ -1137,9 +1131,6 @@ packages:
   '@types/stats.js@0.17.4':
     resolution: {integrity: sha512-jIBvWWShCvlBqBNIZt0KAshWpvSjhkwkEu4ZUcASoAvhmrgAUI2t1dXrjSL4xXVLB4FznPrIsX3nKXFl/Dt4vA==}
 
-  '@types/stats@0.16.30':
-    resolution: {integrity: sha512-ihuaNKhVjTQ8UNLJu7Kx96ywf0bSBday/K//HHvO9LKha07Ezxdm6HkazOKUIdayp0EmGEIPBQSL7eLxm8rX0w==}
-
   '@types/three@0.185.4':
     resolution: {integrity: sha512-gAsBIC07NIFrxjbf7tH2t71c38uulFfk/RFoC7FNBSjMRAQ8J1x/RBvusX0N5PJouaYFJawXQqfCQ0RKUx/1nA==}
 
@@ -1814,9 +1805,6 @@ packages:
   lightningcss@1.33.0:
     resolution: {integrity: sha512-WkUDrojuJs0xkgGf2udWxa3yGBRxPtxUkB79i6aCZLRgc7PM8fZe9TosfPDcvEpQZbuFASnHYmRLBLUbmLOIIA==}
     engines: {node: '>= 12.0.0'}
-
-  lil-gui@0.21.0:
-    resolution: {integrity: sha512-tpvxN7v1GvE/Tv+GRopfOp0W7fVEjF4PltkuX8vOCIfim22rD1ztvfkoEMcv9lzQeuNUSeIrUmUjBwmlW/oUew==}
 
   lodash.debounce@4.0.8:
     resolution: {integrity: sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==}
@@ -3313,8 +3301,6 @@ snapshots:
 
   '@types/stats.js@0.17.4': {}
 
-  '@types/stats@0.16.30': {}
-
   '@types/three@0.185.4':
     dependencies:
       '@dimforge/rapier3d-compat': 0.12.0
@@ -3972,8 +3958,6 @@ snapshots:
       lightningcss-linux-x64-musl: 1.33.0
       lightningcss-win32-arm64-msvc: 1.33.0
       lightningcss-win32-x64-msvc: 1.33.0
-
-  lil-gui@0.21.0: {}
 
   lodash.debounce@4.0.8: {}
 
