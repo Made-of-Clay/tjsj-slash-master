@@ -7,11 +7,15 @@ import {
   WebGLRenderer,
 } from 'three';
 import Stats from 'stats.js';
+import { registerSW } from 'virtual:pwa-register';
 import './style.css';
 import { addLights } from './addLights';
 import { addHelpers } from './addHelpers';
 import { getScene } from './getScene';
 import { ProjectCamera } from './ProjectCamera';
+
+// No-op without a service worker, so this is safe in dev as well.
+registerSW({ immediate: true });
 
 const canvas = document.createElement('canvas');
 document.body.appendChild(canvas);

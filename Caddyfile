@@ -1,0 +1,30 @@
+# Local TLS proxy for testing the PWA on a phone.
+#
+# Service workers and PWA install prompts need a secure context, so a plain
+# http://192.168.x.x URL will not do. Caddy issues the cert from its own local
+# CA (`tls internal`), which the phone has to trust once -- see
+# scripts/mobile-preview.sh, which prints the steps.
+#
+# Driven entirely by env vars so the LAN address does not have to be committed:
+#   LAN_IP      this machine's address on the LAN (set by the script)
+#   HTTPS_PORT  public port to listen on, default 8443
+#   UPSTREAM    vite preview to forward to, default 127.0.0.1:4173
+
+{
+	# Automatic HTTPS would add a port 80 redirect listener, which fails as a
+	# non-root user. Nothing here is served over plain HTTP anyway.
+	auto_https disable_redirects
+}
+
+https://localhost:{$HTTPS_PORT:8443}, https://{$LAN_IP}:{$HTTPS_PORT:8443} {
+	tls internal
+
+	reverse_proxy {$UPSTREAM:127.0.0.1:4173} {
+		# Vite's preview host check would otherwise reject the proxied request.
+		header_up Host {$UPSTREAM:127.0.0.1:4173}
+	}
+
+	log {
+		output discard
+	}
+}

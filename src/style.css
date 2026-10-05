@@ -12,23 +12,40 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  /* With viewport-fit=cover the canvas runs edge to edge under the notch, so
+     HUD elements should pad themselves with these. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 body {
   margin: 0;
   display: flex;
   place-items: center;
+
+  /* Keep a swipe from triggering pull-to-refresh or rubber-banding. */
+  overscroll-behavior: none;
+  background: rgb(5, 14, 17);
 }
 
 body,
 html {
-  height: 100%;
+  /* dvh tracks the mobile URL bar; vh would overflow and show a scrollbar. */
+  height: 100dvh;
+  overflow: hidden;
 }
 
 canvas {
   height: 100%;
   width: 100%;
   outline: none;
+
+  /* The swipe handler owns all touch gestures on the canvas. */
+  touch-action: none;
+  display: block;
 
   background: rgb(34, 193, 195);
   background: linear-gradient(

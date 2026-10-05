@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Slash Master">
+  <defs>
+    <linearGradient id="bg" x1="0.15" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#1d4f57" />
+      <stop offset="0.5" stop-color="#0d2b31" />
+      <stop offset="1" stop-color="#050e11" />
+    </linearGradient>
+    <linearGradient id="blade" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#f2c200" />
+      <stop offset="0.45" stop-color="#ffd83d" />
+      <stop offset="1" stop-color="#fff6c2" />
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="13" />
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)" />
+
+  <g filter="url(#glow)" opacity="0.18">
+    <path d="M158 354 L354 158" stroke="#ffd83d" stroke-width="78" stroke-linecap="round" fill="none" />
+  </g>
+
+  <path d="M158 354 L354 158" stroke="url(#blade)" stroke-width="46" stroke-linecap="round" fill="none" />
+  <path d="M154 350 L350 154" stroke="#fffbe8" stroke-width="11" stroke-linecap="round" fill="none" opacity="0.8" />
+</svg>

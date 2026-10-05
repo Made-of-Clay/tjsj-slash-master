@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "preview:mobile": "bash scripts/mobile-preview.sh",
+    "icons": "bash scripts/generate-icons.sh",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
@@ -24,6 +26,8 @@
     "oxfmt": "^0.62.0",
     "oxlint": "^1.72.0",
     "typescript": "^7.0.2",
-    "vite": "^8.1.2"
+    "vite": "^8.1.2",
+    "vite-plugin-pwa": "^2.0.0",
+    "workbox-window": "^7.4.1"
   }
 }
