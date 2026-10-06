@@ -36,6 +36,12 @@ Run dev mode
 pnpm dev
 ```
 
+Foundation checks (loop, input, pool, swipe projector)
+
+```bash
+pnpm verify:foundation
+```
+
 Build
 
 ```bash

@@ -38,6 +38,8 @@ Fixes found by the logic harness, both in `GameLoop`:
 - Missing `this.#primed = true` meant every frame re-primed and returned: zero fixed steps ever ran and alpha stayed 0. Rendered a static scene at a healthy FPS while simulating nothing.
 - `visibilitychange` was registered in `start()` and removed in `stop()`, so the first auto-pause unregistered the listener that had to resume the loop — one background left the tab frozen permanently. Now registered once in the constructor, with `#paused` separate from `#running`.
 
+- Harness: `scripts/verify-foundation.ts`, 52 checks, run with `pnpm verify:foundation` (needs Bun — `src/` uses extensionless imports, which Node's ESM loader rejects). Added to `tsconfig`'s `include` so it type-checks on every `pnpm build` and cannot rot silently. No framework: plain assertions, no new dependency.
+
 Caveat: WebGL2 fallback and on-device touch are still unverified — no Chrome locally, and `navigator.gpu` is unavailable in node. Fallback must be checked on a phone via `pnpm preview:mobile`.
 
 ### Earlier

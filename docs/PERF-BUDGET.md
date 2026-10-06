@@ -117,9 +117,14 @@ perf improvement.
 ## Before calling a step done
 
 ```bash
+pnpm verify:foundation   # 52 logic checks: loop, pool, input, projector
 pnpm exec tsc --noEmit && pnpm exec oxfmt --check && pnpm exec oxlint && pnpm build
 ls dist/assets | grep -E 'draco|basis|ktx2' # expect no output
 ```
+
+`verify:foundation` is not a substitute for the build — it covers what the
+build cannot see. A loop that runs zero steps and a projector that lands
+off-plane both type-check clean.
 
 Plus, on a phone: 60 FPS, swipes register, tab-switch pauses the loop, and the
 precache total has not grown without a reason.

@@ -55,13 +55,21 @@ src/
     Score.ts               stub
   rendering/
     Scene.ts               scene + lights (absorbs getScene, addLights)
-    Camera.ts              fixed camera, no controls
-    Materials.ts           shared node materials, keyed by theme
+    Camera.ts              fixed camera, swipe projector, viewport sync
+    Materials.ts           TSL smoke test; theme keying lands in step 7
+    placeholder.ts         proof-of-life sphere, deleted in step 2
+    loading.ts             getLoadingManager, moved from the template
   content/
     types.ts               GameObjectDefinition, Theme, SpawnRules
   ui/
     root.ts                overlay mount only, no widgets
 ```
+
+`placeholder.ts` was not in the original tree. It exists because a foundation
+that renders nothing cannot be verified: the sphere proves `init()` resolved,
+the TSL node graph compiled, and the camera frames the play plane. Without it a
+blank screen is indistinguishable from a broken renderer. It has no other job,
+so step 2 deletes it along with the dummy content.
 
 ### Deleted
 
@@ -143,24 +151,45 @@ export class Pool<T> {
   constructor(size: number, factory: () => T, reset: (item: T) => void);
   readonly size: number;
   readonly available: number;
+  readonly inUse: number;
   acquire(): T | undefined; // undefined when exhausted
-  release(item: T): void;
+  release(item: T): void; // idempotent, ignores foreign items
+  each(visit: (item: T) => void): void; // in-use items only, no allocation
 }
 ```
 
 - Pre-allocated in the constructor. Never grows — a pool that grows is an allocation in the frame that needed it.
-- Free list is an index array; no splice, no wrapper objects.
+- Free list is an index stack, plus a `Map<T, number>` for reverse lookup and a `Uint8Array` for free/used state. That is what makes `release` O(1) and makes a double-release a no-op instead of corrupting the free list.
 - `reset` clears position/velocity/rotation/active state so a recycled object can't leak last life.
+- `each` walks the state array, not the items, so iteration allocates nothing — the pattern step 3's update loop needs.
 
 ### `config.ts`
 
 ```ts
+// PERF BUDGET — see docs/PERF-BUDGET.md
 export const TARGET_FPS = 60;
 export const MAX_PIXEL_RATIO = 2;
 export const FIXED_STEP = 1 / 60;
+export const MAX_FRAME_SECONDS = 0.25; // deltas longer than this are a stall
 export const MAX_SUB_STEPS = 5;
+export const FPS_SMOOTHING = 0.1;
+
+// GAMEPLAY
 export const POOL_SIZE = 64; // objects in flight, tuned in step 3
+
+// RENDERING — fixed 2.5D framing; step 2 owns the playfield bounds
+export const GAME_PLANE_DEPTH = 0;
+export const CAMERA_FOV = 60;
+export const CAMERA_NEAR = 0.1;
+export const CAMERA_FAR = 100;
+export const CAMERA_POSITION: readonly [number, number, number] = [0, 1.6, 11];
+export const CAMERA_TARGET: readonly [number, number, number] = [0, 1.2, 0];
 ```
+
+`MAX_FRAME_SECONDS` and `FPS_SMOOTHING` are additions over the original
+snippet: a stall clamp is what actually prevents the catch-up spiral
+(`MAX_SUB_STEPS` alone cannot, because the accumulator would already hold the
+whole stall), and an EMA is the only way to read the FPS meter.
 
 ### `content/types.ts`
 
@@ -230,23 +259,49 @@ Then assert:
 
 ## Definition of done
 
-- [ ] `src/` matches the target tree; no starter-template files remain.
-- [ ] `WebGPURenderer` initialized and driving frames via `setAnimationLoop`.
-- [ ] `GameLoop` runs a fixed 1/60 step, clamps sub-steps, pauses when hidden, reports fps.
-- [ ] `Input` emits world-space swipe segments from pointer events; mouse and touch share one path.
-- [ ] `Pool` acquire/release with no growth and no per-frame garbage.
-- [ ] `content/types.ts` compiles; no theme data.
-- [ ] `dist/assets` free of draco/basis; before/after sizes recorded in `CHANGELOG.md`.
-- [ ] `docs/PERF-BUDGET.md` written; `README.md` links it.
-- [ ] `pnpm build`, `pnpm lint`, `pnpm fmt:check` all green.
-- [ ] `CHANGELOG.md` entry for the step.
+- [x] `src/` matches the target tree; no starter-template files remain.
+- [x] `WebGPURenderer` initialized and driving frames via `setAnimationLoop`.
+- [x] `GameLoop` runs a fixed 1/60 step, clamps sub-steps, pauses when hidden, reports fps.
+- [x] `Input` emits world-space swipe segments from pointer events; mouse and touch share one path.
+- [x] `Pool` acquire/release with no growth and no per-frame garbage.
+- [x] `content/types.ts` compiles; no theme data.
+- [x] `dist/assets` free of draco/basis; before/after sizes recorded in `CHANGELOG.md`.
+- [x] `docs/PERF-BUDGET.md` written; `README.md` links it.
+- [x] `pnpm build`, `pnpm lint`, `pnpm fmt:check` all green.
+- [x] `CHANGELOG.md` entry for the step.
+
+Loop, pool, input and the swipe projector are covered by
+`scripts/verify-foundation.ts` — 52 checks, all passing:
+
+```bash
+pnpm verify:foundation
+```
+
+The projector checks matter because the earlier passes fed `Input` an identity
+projector — the real `createSwipeProjector` ray-plane math had never run. It now
+has: every NDC tested lands exactly on `z = 0`, segments are planar, and mapping
+is symmetric about the centre.
+
+**Not verified — no Chrome here and `navigator.gpu` is unavailable in node:**
+
+- the WebGL2 fallback path, which is what phones without WebGPU will run
+- whether `createPulseMaterial`'s TSL graph actually compiles and renders
+- real touch input
+
+Check on a device with `pnpm preview:mobile` before treating this as shippable.
 
 ## Commits
 
 1. `refactor: prune starter template, adopt WebGPURenderer + TSL`
-2. `feat: game skeleton — loop, input, pool, config`
-3. `perf: drop three addons barrel, verify bundle`
-4. `docs: performance budget`
+2. `feat: game skeleton — loop, input, pool, config, contracts`
+3. `docs: step 1 plan and performance budget`
+4. `refactor: drop unused params from step 3+ stubs`
+
+Two changes from this plan: the planned `perf: drop three addons barrel` commit
+was folded into 1 — it _is_ the `ProjectCamera.ts` deletion, and splitting it
+out would have staged the same hunk twice. The planned `feat` commit carries
+`contracts` in its subject, and 4 is a follow-up cleanup discovered while
+finishing the step.
 
 ## Needs you (not automatable)
 

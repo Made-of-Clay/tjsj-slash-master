@@ -12,7 +12,8 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check"
+    "fmt:check": "oxfmt --check",
+    "verify:foundation": "bun scripts/verify-foundation.ts"
   },
   "dependencies": {
     "stats.js": "^0.17.0",
