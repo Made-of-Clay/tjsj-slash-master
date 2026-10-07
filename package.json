@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "stats.js": "^0.17.0",
-    "three": "^0.185.1"
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/stats.js": "^0.17.4",
