@@ -65,11 +65,16 @@ setGlobal('window', stubWindow);
 // Safe to import eagerly too — no src/ module touches document or window at
 // module scope; they attach listeners from constructors only.
 import { Vector3 } from 'three/webgpu';
-import { GAME_PLANE_DEPTH } from '../src/config.ts';
+import { GAME_PLANE_DEPTH, PLAY_BOUNDS } from '../src/config.ts';
 import { GameLoop } from '../src/game/GameLoop.ts';
 import { Input } from '../src/game/Input.ts';
 import { Pool } from '../src/game/Pool.ts';
-import { createCamera, createSwipeProjector } from '../src/rendering/Camera.ts';
+import {
+    applyFraming,
+    computeFitDistance,
+    createCamera,
+    createSwipeProjector,
+} from '../src/rendering/Camera.ts';
 
 // ===== GameLoop =====
 console.log('GameLoop');
@@ -354,11 +359,15 @@ console.log('Swipe projector');
 
     project(0, 0, out);
     check(
-        'screen centre maps to the playfield origin',
-        out.x.toFixed(3) === '0.000' && out.y.toFixed(3) === '1.600',
+        'screen centre maps to the playfield centre',
+        out.x.toFixed(3) === '0.000' && out.y.toFixed(3) === PLAY_BOUNDS.centerY.toFixed(3),
         `got ${out.x.toFixed(3)},${out.y.toFixed(3)}`,
     );
-    check('screen centre lands on the play plane', out.z === GAME_PLANE_DEPTH, `z=${out.z}`);
+    check(
+        'screen centre lands on the play plane',
+        Math.abs(out.z - GAME_PLANE_DEPTH) < 1e-9,
+        `z=${out.z}`,
+    );
 
     project(0, 1, out);
     const topY = out.y;
@@ -367,7 +376,7 @@ console.log('Swipe projector');
     project(-1, 0, out);
     const leftX = out.x;
 
-    check('NDC +y maps above centre', topY > 1.6, `y=${topY.toFixed(3)}`);
+    check('NDC +y maps above centre', topY > PLAY_BOUNDS.centerY, `y=${topY.toFixed(3)}`);
     check('NDC +x maps to world +x', rightX > 0, `x=${rightX.toFixed(3)}`);
     check(
         'NDC -x mirrors +x',
@@ -384,7 +393,7 @@ console.log('Swipe projector');
         [1, -1],
     ] as const) {
         project(ndcX, ndcY, out);
-        if (out.z !== GAME_PLANE_DEPTH) {
+        if (Math.abs(out.z - GAME_PLANE_DEPTH) > 1e-9) {
             everyPointOnPlane = false;
         }
     }
@@ -404,6 +413,68 @@ console.log('Swipe projector');
     out.set(999, 999, 999);
     project(0, 0, out);
     check('the out vector is always written', out.x !== 999);
+}
+
+// ===== camera fit =====
+console.log('Camera fit');
+{
+    const aspects = [21 / 9, 16 / 9, 4 / 3, 1, 3 / 4, 9 / 16, 9 / 19.5];
+    const { halfWidth, halfHeight, centerY } = PLAY_BOUNDS;
+    const fov = 60;
+    const tanHalf = Math.tan((fov * Math.PI) / 360);
+
+    let monotonic = true;
+    let atLeastHeight = true;
+    let previous = 0;
+    for (const aspect of aspects) {
+        const distance = computeFitDistance(halfWidth, halfHeight, fov, aspect);
+        const pureHeight = halfHeight / tanHalf;
+        if (distance + 1e-9 < pureHeight) atLeastHeight = false;
+        if (distance < previous - 1e-9) monotonic = false;
+        previous = Math.max(previous, distance);
+    }
+    check('fit distance never dips below the pure-height distance', atLeastHeight);
+    check('fit distance is monotonic non-decreasing as aspect narrows', monotonic);
+
+    let everyCornerInside = true;
+    for (const aspect of aspects) {
+        const distance = createCamera(aspect).position.z;
+        const halfViewH = distance * tanHalf;
+        const halfViewW = halfViewH * aspect;
+
+        for (const [dx, dy] of [
+            [-halfWidth, -halfHeight],
+            [halfWidth, -halfHeight],
+            [halfWidth, halfHeight],
+            [-halfWidth, halfHeight],
+        ] as const) {
+            const ndcX = dx / halfViewW;
+            const ndcY = (dy - centerY) / halfViewH;
+            if (Math.abs(ndcX) > 1 || Math.abs(ndcY) > 1) everyCornerInside = false;
+        }
+    }
+    check('every arena corner lands inside NDC at all target aspects', everyCornerInside);
+
+    const portrait = createCamera(9 / 16).position.z;
+    const landscape = createCamera(16 / 9).position.z;
+    const drift = Math.abs(portrait - landscape) / Math.max(portrait, landscape);
+    check(
+        'camera distance drifts < 15% between 9:16 and 16:9',
+        drift < 0.15,
+        `drift=${drift.toFixed(3)}`,
+    );
+
+    // Regression: framing must not move the play plane.
+    const reframed = createCamera(16 / 9);
+    applyFraming(reframed, PLAY_BOUNDS, 9 / 16);
+    const project = createSwipeProjector(reframed);
+    const out = new Vector3();
+    project(0.3, -0.2, out);
+    check(
+        'reframing keeps the projector on the play plane',
+        Math.abs(out.z - GAME_PLANE_DEPTH) < 1e-9,
+        `z=${out.z}`,
+    );
 }
 
 if (failures > 0) {

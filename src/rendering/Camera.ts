@@ -1,21 +1,62 @@
 import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three/webgpu';
-import {
-    CAMERA_FAR,
-    CAMERA_FOV,
-    CAMERA_NEAR,
-    CAMERA_POSITION,
-    CAMERA_TARGET,
-    GAME_PLANE_DEPTH,
-} from '../config';
+import { CAMERA, GAME_PLANE_DEPTH, PLAY_BOUNDS } from '../config';
+
+/** The world-space arena the camera must keep fully in frame. */
+export interface PlayBounds {
+    readonly halfWidth: number;
+    readonly halfHeight: number;
+    readonly centerY: number;
+}
 
 /**
- * Fixed camera. No orbit controls: PLAN.md step 2 wants a locked 2.5D frame,
- * and OrbitControls would also capture the canvas pointer that Input owns.
+ * Distance at which a view-perpendicular plane with these half-extents fills the
+ * frustum for `aspect`.
+ *
+ * Two constraints compete: the height must fit (`dHeight`) and the width must fit
+ * (`dWidth`). The larger wins — that is the fit-bounds policy (step 2 decision
+ * B): the whole arena is always visible, and extra space at wide aspects becomes
+ * background margin.
+ */
+export function computeFitDistance(
+    halfWidth: number,
+    halfHeight: number,
+    fovDeg: number,
+    aspect: number,
+): number {
+    const tanHalfFov = Math.tan((fovDeg * Math.PI) / 180 / 2);
+    const distanceForHeight = halfHeight / tanHalfFov;
+    const distanceForWidth = halfWidth / (tanHalfFov * aspect);
+    return Math.max(distanceForHeight, distanceForWidth);
+}
+
+/**
+ * Places the camera straight-on so `bounds` fits the viewport exactly.
+ *
+ * Called on construction and on every resize: camera distance depends on aspect,
+ * so a resize must re-derive it, not just refresh the projection matrix. The
+ * play plane stays at `GAME_PLANE_DEPTH`, so the swipe projector is unaffected.
+ */
+export function applyFraming(camera: PerspectiveCamera, bounds: PlayBounds, aspect: number): void {
+    camera.aspect = aspect;
+    camera.updateProjectionMatrix();
+
+    const distance =
+        computeFitDistance(bounds.halfWidth, bounds.halfHeight, camera.fov, aspect) + CAMERA.margin;
+
+    camera.position.set(0, bounds.centerY, distance);
+    camera.lookAt(0, bounds.centerY, 0);
+}
+
+/**
+ * Fixed camera. No orbit controls: PLAN.md step 2 wants a locked 2.5D frame, and
+ * OrbitControls would also capture the canvas pointer that Input owns.
+ *
+ * Straight-on (decision A) so the fit math is exact; distance is set by
+ * applyFraming, not hardcoded.
  */
 export function createCamera(aspect: number): PerspectiveCamera {
-    const camera = new PerspectiveCamera(CAMERA_FOV, aspect, CAMERA_NEAR, CAMERA_FAR);
-    camera.position.set(...CAMERA_POSITION);
-    camera.lookAt(...CAMERA_TARGET);
+    const camera = new PerspectiveCamera(CAMERA.fov, aspect, CAMERA.near, CAMERA.far);
+    applyFraming(camera, PLAY_BOUNDS, aspect);
     return camera;
 }
 
@@ -62,6 +103,7 @@ export function createViewportSync(
         setSize(w: number, h: number, updateStyle?: boolean): void;
     },
     camera: PerspectiveCamera,
+    bounds: PlayBounds = PLAY_BOUNDS,
 ): () => void {
     let dirty = true;
 
@@ -92,10 +134,8 @@ export function createViewportSync(
             renderer.setSize(width, height, false);
         }
 
-        const aspect = width / height;
-        if (camera.aspect !== aspect) {
-            camera.aspect = aspect;
-            camera.updateProjectionMatrix();
-        }
+        // Distance depends on aspect, so framing is re-derived on every resize,
+        // not just the projection matrix.
+        applyFraming(camera, bounds, width / height);
     };
 }

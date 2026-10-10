@@ -1,7 +1,7 @@
-import { WebGPURenderer } from 'three/webgpu';
+import { BufferGeometry, LineBasicMaterial, LineLoop, Vector3, WebGPURenderer } from 'three/webgpu';
 import { registerSW } from 'virtual:pwa-register';
 import './style.css';
-import { MAX_PIXEL_RATIO } from './config';
+import { DEBUG_PLAYFIELD, MAX_PIXEL_RATIO, PLAY_BOUNDS } from './config';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
 import { createCamera, createSwipeProjector, createViewportSync } from './rendering/Camera';
@@ -30,6 +30,22 @@ async function boot(): Promise<void> {
 
     const scene = createScene();
     scene.add(createPlaceholder());
+
+    // Dev-only arena outline so the fit math is visible against every aspect
+    // ratio. Dropped from the production bundle with DEBUG_PLAYFIELD.
+    if (DEBUG_PLAYFIELD) {
+        const { halfWidth, halfHeight, centerY } = PLAY_BOUNDS;
+        const outline = new LineLoop(
+            new BufferGeometry().setFromPoints([
+                new Vector3(-halfWidth, centerY - halfHeight, 0),
+                new Vector3(halfWidth, centerY - halfHeight, 0),
+                new Vector3(halfWidth, centerY + halfHeight, 0),
+                new Vector3(-halfWidth, centerY + halfHeight, 0),
+            ]),
+            new LineBasicMaterial({ color: 0x2ee6a0 }),
+        );
+        scene.add(outline);
+    }
 
     const camera = createCamera(canvas.clientWidth / canvas.clientHeight);
     const syncViewport = createViewportSync(renderer, camera);

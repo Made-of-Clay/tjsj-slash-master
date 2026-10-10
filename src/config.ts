@@ -31,16 +31,34 @@ export const FPS_SMOOTHING = 0.1;
 // Objects alive at once. Step 3 tunes this against the real spawn rate.
 export const POOL_SIZE = 64;
 
-// ===== RENDERING =====
+// ===== PLAYFIELD =====
 // The swipe ray is cast onto this depth plane, so a slice happens where the
 // fruit is rather than wherever the camera happens to look.
 export const GAME_PLANE_DEPTH = 0;
 
-export const CAMERA_FOV = 60;
-export const CAMERA_NEAR = 0.1;
-export const CAMERA_FAR = 100;
+// World-space arena, centred on the origin. Tall and portrait-first (step 2
+// decision D): the binding fit dimension stays width in portrait and height in
+// landscape, so the camera distance barely moves between orientations.
+export const PLAY_BOUNDS = {
+    halfWidth: 3.5,
+    halfHeight: 7,
+    /** Vertical centre the camera looks straight at. Raise to push the arena low. */
+    centerY: 0,
+} as const;
 
-// Fixed 2.5D framing. Step 2 owns the playfield bounds; this only has to put a
-// sensible object in frame.
-export const CAMERA_POSITION: readonly [number, number, number] = [0, 1.6, 11];
-export const CAMERA_TARGET: readonly [number, number, number] = [0, 1.2, 0];
+// ===== CAMERA =====
+// Fixed 2.5D framing, straight-on (step 2 decision A): the play plane is
+// view-perpendicular, which keeps the fit math exact. Distance is derived from
+// PLAY_BOUNDS + aspect by applyFraming in rendering/Camera.ts, never hardcoded.
+export const CAMERA = {
+    fov: 60,
+    near: 0.1,
+    far: 100,
+    /** World units added to the fit distance so the arena never touches an edge. */
+    margin: 1,
+} as const;
+
+// ===== DEBUG =====
+// Bounds rectangle and other playfield debug. Vite folds this to `false` in the
+// production build, so the debug geometry is dropped from the bundle.
+export const DEBUG_PLAYFIELD = import.meta.env.DEV;
