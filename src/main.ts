@@ -7,6 +7,7 @@ import { Input } from './game/Input';
 import { createCamera, createSwipeProjector, createViewportSync } from './rendering/Camera';
 import { createPlaceholder } from './rendering/placeholder';
 import { createScene } from './rendering/Scene';
+import { createBladeTrail } from './rendering/BladeTrail';
 import { createUiRoot } from './ui/root';
 
 // No-op without a service worker, so this is safe in dev as well.
@@ -37,6 +38,11 @@ async function boot(): Promise<void> {
     createUiRoot();
 
     const input = new Input(canvas, createSwipeProjector(camera));
+
+    const bladeTrail = createBladeTrail(scene, camera, 32);
+    input.onStrokeStart((w) => bladeTrail.start(w));
+    input.onStrokeMove((w) => bladeTrail.add(w));
+    input.onStrokeEnd(() => bladeTrail.end());
 
     // Dev probe: proves pointer events reach the world-space projection. Step 4
     // replaces it with collision tests.

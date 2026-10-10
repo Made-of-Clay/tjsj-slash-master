@@ -15,6 +15,9 @@ export interface SwipeSegment {
 }
 
 export type SwipeHandler = (segment: SwipeSegment) => void;
+export type StrokeStartHandler = (world: Vector3) => void;
+export type StrokeMoveHandler = (world: Vector3) => void;
+export type StrokeEndHandler = () => void;
 
 // Sub-pixel jitter from a resting finger; ignored so we don't emit stubs.
 const MIN_SEGMENT_NDC = 0.004;
@@ -32,6 +35,9 @@ export class Input {
     #target: HTMLElement;
     #project: Projector;
     #handlers: SwipeHandler[] = [];
+    #strokeStartHandlers: StrokeStartHandler[] = [];
+    #strokeMoveHandlers: StrokeMoveHandler[] = [];
+    #strokeEndHandlers: StrokeEndHandler[] = [];
 
     /** The pointer currently dragging. A second finger must not hijack it. */
     #pointerId: number | null = null;
@@ -50,26 +56,42 @@ export class Input {
         this.#target = target;
         this.#project = project;
 
-        target.addEventListener('pointerdown', this.#onPointerDown);
-        target.addEventListener('pointermove', this.#onPointerMove);
-        target.addEventListener('pointerup', this.#onPointerUp);
-        target.addEventListener('pointercancel', this.#onPointerUp);
+        target.addEventListener('pointerdown', this.#pointerDownHandler);
+        target.addEventListener('pointermove', this.#pointerMoveHandler);
+        target.addEventListener('pointerup', this.#pointerUpHandler);
+        target.addEventListener('pointercancel', this.#pointerUpHandler);
     }
 
     onSwipe(handler: SwipeHandler): void {
         this.#handlers.push(handler);
     }
 
+    onStrokeStart(handler: StrokeStartHandler): void {
+        this.#strokeStartHandlers.push(handler);
+    }
+
+    onStrokeMove(handler: StrokeMoveHandler): void {
+        this.#strokeMoveHandlers.push(handler);
+    }
+
+    onStrokeEnd(handler: StrokeEndHandler): void {
+        this.#strokeEndHandlers.push(handler);
+    }
+
     dispose(): void {
-        this.#target.removeEventListener('pointerdown', this.#onPointerDown);
-        this.#target.removeEventListener('pointermove', this.#onPointerMove);
-        this.#target.removeEventListener('pointerup', this.#onPointerUp);
-        this.#target.removeEventListener('pointercancel', this.#onPointerUp);
+        this.#target.removeEventListener('pointerdown', this.#pointerDownHandler);
+        this.#target.removeEventListener('pointermove', this.#pointerMoveHandler);
+        this.#target.removeEventListener('pointerup', this.#pointerUpHandler);
+        this.#target.removeEventListener('pointercancel', this.#pointerUpHandler);
         this.#handlers.length = 0;
+        this.#strokeStartHandlers.length = 0;
+        this.#strokeMoveHandlers.length = 0;
+        this.#strokeEndHandlers.length = 0;
         this.#pointerId = null;
     }
 
-    #onPointerDown = (event: PointerEvent): void => {
+    /** Handler passed as callback to event listener */
+    #pointerDownHandler = (event: PointerEvent): void => {
         if (this.#pointerId !== null) return;
 
         this.#pointerId = event.pointerId;
@@ -80,9 +102,14 @@ export class Input {
         // is the normal case for a full-screen swipe.
         this.#target.setPointerCapture(event.pointerId);
         this.#hasPrevious = true;
+        this.#project(this.#previous.x, this.#previous.y, this.#from);
+        for (const handler of this.#strokeStartHandlers) {
+            handler(this.#from);
+        }
     };
 
-    #onPointerMove = (event: PointerEvent): void => {
+    /** Handler passed as callback to event listener  */
+    #pointerMoveHandler = (event: PointerEvent): void => {
         if (event.pointerId !== this.#pointerId || !this.#hasPrevious) return;
 
         // A fast flick on a 120Hz screen can pack several samples into one
@@ -99,16 +126,21 @@ export class Input {
         }
     };
 
-    #onPointerUp = (event: PointerEvent): void => {
+    /** Handler passed as callback to event listener  */
+    #pointerUpHandler = (event: PointerEvent): void => {
         if (event.pointerId !== this.#pointerId) return;
-
-        this.#pointerId = null;
-        this.#hasPrevious = false;
-        this.#rect = null;
 
         if (this.#target.hasPointerCapture(event.pointerId)) {
             this.#target.releasePointerCapture(event.pointerId);
         }
+
+        for (const handler of this.#strokeEndHandlers) {
+            handler();
+        }
+
+        this.#pointerId = null;
+        this.#hasPrevious = false;
+        this.#rect = null;
     };
 
     #emit(event: PointerEvent): void {
@@ -121,6 +153,10 @@ export class Input {
         this.#project(this.#previous.x, this.#previous.y, this.#from);
         this.#project(this.#current.x, this.#current.y, this.#to);
         this.#previous.copy(this.#current);
+
+        for (const handler of this.#strokeMoveHandlers) {
+            handler(this.#to);
+        }
 
         if (this.#handlers.length === 0) return;
 
