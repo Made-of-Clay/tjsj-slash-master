@@ -25,8 +25,7 @@ export function createBladeTrail(
     add: (world: Vector3) => void;
     end: () => void;
 } {
-    const projector = createSwipeProjector(camera);
-    void projector;
+    createSwipeProjector(camera);
 
     const points: Vector3[] = [];
     const geometry = new BufferGeometry();

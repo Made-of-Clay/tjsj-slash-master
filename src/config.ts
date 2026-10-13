@@ -42,7 +42,7 @@ export const GAME_PLANE_DEPTH = 0;
 export const PLAY_BOUNDS = {
     halfWidth: 3.5,
     halfHeight: 7,
-    /** Vertical centre the camera looks straight at. Raise to push the arena low. */
+    /** Vertical center the camera looks straight at. Raise to push the arena low. */
     centerY: 0,
 } as const;
 
