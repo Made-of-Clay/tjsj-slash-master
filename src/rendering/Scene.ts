@@ -1,4 +1,17 @@
-import { AmbientLight, Color, DirectionalLight, Scene } from 'three/webgpu';
+import { AmbientLight, DirectionalLight, Scene } from 'three/webgpu';
+import type { Node } from 'three/webgpu';
+import { createBackgroundNode, type BackgroundPalette } from './Materials';
+
+/** `backgroundNode` exists at runtime (three 0.185) but not in @types/three's Scene. */
+type SceneWithBackgroundNode = Scene & { backgroundNode: Node | null };
+
+// Temporary palette literal until workstream C lands content/themes/halloween.ts.
+const BACKGROUND_PALETTE: BackgroundPalette = {
+    top: '#0e2730',
+    bottom: '#03080b',
+    vignette: '#000000',
+    vignetteStrength: 0.6,
+};
 
 /**
  * Scene plus its lighting.
@@ -9,7 +22,10 @@ import { AmbientLight, Color, DirectionalLight, Scene } from 'three/webgpu';
  */
 export function createScene(): Scene {
     const scene = new Scene();
-    scene.background = new Color('#050e11');
+
+    // Decision C: the themeable TSL background is the single source of truth.
+    // (The dead CSS canvas gradient is removed in workstream F.)
+    (scene as SceneWithBackgroundNode).backgroundNode = createBackgroundNode(BACKGROUND_PALETTE);
 
     const ambient = new AmbientLight('#ffffff', 0.6);
     scene.add(ambient);
