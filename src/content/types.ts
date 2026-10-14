@@ -27,14 +27,50 @@ export interface SpawnRules {
 }
 
 /**
+ * Scene-look palette: the vertical background gradient. Consumed by
+ * `rendering/Materials.ts`'s `createBackgroundNode` (via `screenUV`), never by
+ * gameplay.
+ */
+export interface ThemeGradient {
+    /** Colour at the top of the screen. */
+    top: string;
+    /** Colour at the bottom of the screen. */
+    bottom: string;
+    /** Colour the screen corners fade toward. */
+    vignette: string;
+    /** 0 = no vignette, 1 = corners fully `vignette`. */
+    vignetteStrength: number;
+}
+
+/**
+ * Theme lighting tints. Intensities remain code-side (tuned in workstream D).
+ */
+export interface ThemeLighting {
+    ambient: string;
+    key: string;
+    fill: string;
+    rim: string;
+}
+
+/** Object accent colours, read by object materials in step 3. Gameplay ignores them. */
+export interface ThemeAccents {
+    target: string;
+    restricted: string;
+}
+
+/**
  * A named set of objects and spawn rules. Theme data arrives in step 7; only
  * the shape is settled here, so nothing in the codebase depends on a theme
  * file existing yet.
  */
 export interface Theme {
     id: string;
-    /** Shape owned by step 2, which has not decided it yet. */
-    background: unknown;
+    /** Vertical gradient background (via `screenUV`). */
+    background: ThemeGradient;
+    /** Light colour tints. Intensities tuned in workstream D. */
+    lighting: ThemeLighting;
+    /** Object accent colours. */
+    accents: ThemeAccents;
     objects: GameObjectDefinition[];
     spawnRules: SpawnRules;
 }

@@ -2,6 +2,7 @@ import { BufferGeometry, LineBasicMaterial, LineLoop, Vector3, WebGPURenderer } 
 import { registerSW } from 'virtual:pwa-register';
 import './style.css';
 import { DEBUG_PLAYFIELD, MAX_PIXEL_RATIO, PLAY_BOUNDS } from './config';
+import { halloween } from './content/themes/halloween';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
 import { createCamera, createSwipeProjector, createViewportSync } from './rendering/Camera';
@@ -28,7 +29,7 @@ async function boot(): Promise<void> {
     // the two backends do not behave identically.
     console.info(`backend: ${renderer.backend.constructor.name}`);
 
-    const scene = createScene();
+    const scene = createScene(halloween);
     scene.add(createPlaceholder());
 
     // Dev-only arena outline so the fit math is visible against every aspect

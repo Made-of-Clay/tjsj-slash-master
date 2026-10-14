@@ -1,6 +1,7 @@
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import type { Node } from 'three/webgpu';
 import { color, mix, screenUV, smoothstep, time, vec2 } from 'three/tsl';
+import type { ThemeGradient } from '../content/types';
 
 /**
  * Shared node materials.
@@ -27,28 +28,13 @@ export function createPulseMaterial(primary: string, secondary: string): MeshSta
 }
 
 /**
- * Background palette. Temporary shape until workstream C moves theme data into
- * `content/themes/`; keep gameplay from ever reading this.
- */
-export interface BackgroundPalette {
-    /** Colour at the top of the screen. */
-    top: string;
-    /** Colour at the bottom of the screen. */
-    bottom: string;
-    /** Colour the screen corners fade toward. */
-    vignette: string;
-    /** 0 = no vignette, 1 = corners fully `vignette`. */
-    vignetteStrength: number;
-}
-
-/**
  * Full-screen TSL background: a vertical gradient with a radial vignette.
  *
  * Driven by `screenUV`, so the gradient is anchored to the screen and does not
  * move with camera framing or resize. One full-screen fragment, no geometry and
  * no post-processing (step 2 decision C).
  */
-export function createBackgroundNode(palette: BackgroundPalette): Node {
+export function createBackgroundNode(palette: ThemeGradient): Node {
     // screenUV is (0,0) bottom-left -> (1,1) top-right in screen space.
     const gradient = mix(color(palette.bottom), color(palette.top), screenUV.y);
 
