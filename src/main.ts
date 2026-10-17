@@ -21,6 +21,7 @@ import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
 import { createCamera, createSwipeProjector, createViewportSync } from './rendering/Camera';
 import { createDebugRect } from './rendering/PlayArea';
+import { createDevCube } from './rendering/DevCube';
 import { createScene } from './rendering/Scene';
 import { createBladeTrail } from './rendering/BladeTrail';
 import { createUiRoot } from './ui/root';
@@ -67,6 +68,10 @@ async function boot(): Promise<void> {
         scene.add(createDebugRect(PLAY_BOUNDS));
     }
 
+    // Temporary lit subject for by-eye tuning (lighting/tone mapping/palette).
+    const devCube = createDevCube();
+    scene.add(devCube.mesh);
+
     const camera = createCamera(canvas.clientWidth / canvas.clientHeight);
     const syncViewport = createViewportSync(renderer, camera);
     syncViewport();
@@ -98,8 +103,10 @@ async function boot(): Promise<void> {
     }
 
     const loop = new GameLoop({
-        // Empty until step 3 gives the simulation something to advance.
-        fixedUpdate: () => {},
+        // Only the temporary dev cube so far; step 3 gives the sim real work.
+        fixedUpdate: (dt) => {
+            devCube.update(dt);
+        },
         render: () => {
             stats?.begin();
             syncViewport();
