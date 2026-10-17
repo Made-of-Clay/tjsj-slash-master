@@ -1,5 +1,5 @@
 import { BoxGeometry, Mesh, MeshStandardMaterial } from 'three/webgpu';
-import { GAME_PLANE_DEPTH, PLAY_BOUNDS } from '../config';
+import { GAME_PLANE_DEPTH, PLAYFIELD } from '../config';
 
 /**
  * Temporary lit subject for step-2 tuning (lighting, tone mapping, palette).
@@ -25,7 +25,7 @@ export function createDevCube(): DevCube {
     );
 
     // Centre of the play field, on the gameplay plane so a swipe passes through.
-    mesh.position.set(0, PLAY_BOUNDS.centerY, GAME_PLANE_DEPTH);
+    mesh.position.set(0, PLAYFIELD.centerY, GAME_PLANE_DEPTH);
     mesh.rotation.x = X_TILT;
     mesh.rotation.z = Z_TILT;
 

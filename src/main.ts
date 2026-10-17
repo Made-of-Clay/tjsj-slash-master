@@ -8,19 +8,18 @@ import {
 import type { ToneMapping } from 'three/webgpu';
 import { registerSW } from 'virtual:pwa-register';
 import './style.css';
-import {
-    DEBUG_PLAYFIELD,
-    MAX_PIXEL_RATIO,
-    PLAY_BOUNDS,
-    TONE_MAPPING,
-    TONE_MAPPING_EXPOSURE,
-} from './config';
+import { DEBUG_PLAYFIELD, MAX_PIXEL_RATIO, TONE_MAPPING, TONE_MAPPING_EXPOSURE } from './config';
 import type { ToneMappingMode } from './config';
 import { halloween } from './content/themes/halloween';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
-import { createCamera, createSwipeProjector, createViewportSync } from './rendering/Camera';
-import { createDebugRect } from './rendering/PlayArea';
+import {
+    createCamera,
+    createPlayField,
+    createSwipeProjector,
+    createViewportSync,
+} from './rendering/Camera';
+import { createDebugRect, writeDebugRect } from './rendering/PlayArea';
 import { createDevCube } from './rendering/DevCube';
 import { createScene } from './rendering/Scene';
 import { createBladeTrail } from './rendering/BladeTrail';
@@ -61,19 +60,27 @@ async function boot(): Promise<void> {
 
     const scene = createScene(halloween);
 
-    // Dev-only arena outline so the fit math is visible against every aspect
-    // ratio. Vite folds DEBUG_PLAYFIELD to false in the production build, so the
-    // rect and its geometry are dropped from the bundle.
-    if (DEBUG_PLAYFIELD) {
-        scene.add(createDebugRect(PLAY_BOUNDS));
+    const camera = createCamera(canvas.clientWidth / canvas.clientHeight);
+    // Live playfield: width is derived from the aspect, so gameplay reads its
+    // bounds from here rather than a constant.
+    const playfield = createPlayField(camera);
+
+    // Dev-only arena outline so the full-width bounds are visible against every
+    // aspect ratio. Vite folds DEBUG_PLAYFIELD to false in the production build,
+    // so the rect and its geometry are dropped from the bundle.
+    const debugRect = DEBUG_PLAYFIELD ? createDebugRect(playfield.bounds) : undefined;
+    if (debugRect) {
+        scene.add(debugRect);
     }
 
     // Temporary lit subject for by-eye tuning (lighting/tone mapping/palette).
     const devCube = createDevCube();
     scene.add(devCube.mesh);
 
-    const camera = createCamera(canvas.clientWidth / canvas.clientHeight);
-    const syncViewport = createViewportSync(renderer, camera);
+    // Bounds change with aspect, so the outline is redrawn on every reframe.
+    const syncViewport = createViewportSync(renderer, playfield, (bounds) => {
+        if (debugRect) writeDebugRect(debugRect, bounds);
+    });
     syncViewport();
 
     createUiRoot();

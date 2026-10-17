@@ -65,14 +65,14 @@ setGlobal('window', stubWindow);
 // Safe to import eagerly too — no src/ module touches document or window at
 // module scope; they attach listeners from constructors only.
 import { Vector3 } from 'three/webgpu';
-import { GAME_PLANE_DEPTH, PLAY_BOUNDS } from '../src/config.ts';
+import { CAMERA, GAME_PLANE_DEPTH, PLAYFIELD } from '../src/config.ts';
 import { GameLoop } from '../src/game/GameLoop.ts';
 import { Input } from '../src/game/Input.ts';
 import { Pool } from '../src/game/Pool.ts';
 import {
-    applyFraming,
-    computeFitDistance,
+    computePlayBounds,
     createCamera,
+    createPlayField,
     createSwipeProjector,
 } from '../src/rendering/Camera.ts';
 
@@ -360,7 +360,7 @@ console.log('Swipe projector');
     project(0, 0, out);
     check(
         'screen centre maps to the playfield centre',
-        out.x.toFixed(3) === '0.000' && out.y.toFixed(3) === PLAY_BOUNDS.centerY.toFixed(3),
+        out.x.toFixed(3) === '0.000' && out.y.toFixed(3) === PLAYFIELD.centerY.toFixed(3),
         `got ${out.x.toFixed(3)},${out.y.toFixed(3)}`,
     );
     check(
@@ -376,7 +376,7 @@ console.log('Swipe projector');
     project(-1, 0, out);
     const leftX = out.x;
 
-    check('NDC +y maps above centre', topY > PLAY_BOUNDS.centerY, `y=${topY.toFixed(3)}`);
+    check('NDC +y maps above centre', topY > PLAYFIELD.centerY, `y=${topY.toFixed(3)}`);
     check('NDC +x maps to world +x', rightX > 0, `x=${rightX.toFixed(3)}`);
     check(
         'NDC -x mirrors +x',
@@ -419,54 +419,55 @@ console.log('Swipe projector');
 console.log('Camera fit');
 {
     const aspects = [21 / 9, 16 / 9, 4 / 3, 1, 3 / 4, 9 / 16, 9 / 19.5];
-    const { halfWidth, halfHeight, centerY } = PLAY_BOUNDS;
-    const fov = 60;
+    const fov = CAMERA.fov;
     const tanHalf = Math.tan((fov * Math.PI) / 360);
 
-    let monotonic = true;
-    let atLeastHeight = true;
-    let previous = 0;
+    // Full-width policy: the height is always the binding dimension, so the
+    // camera distance is constant and wide screens reveal more width.
+    const distances = aspects.map((aspect) => createCamera(aspect).position.z);
+    const spread = Math.max(...distances) - Math.min(...distances);
+    check('camera distance is constant across aspects', spread < 1e-9, `spread=${spread}`);
+    check('camera distance clears the pure-height distance', distances[0] > 0);
+
+    let growsWithAspect = true;
+    let spansMinusMargin = true;
+    let previous = Infinity;
     for (const aspect of aspects) {
-        const distance = computeFitDistance(halfWidth, halfHeight, fov, aspect);
-        const pureHeight = halfHeight / tanHalf;
-        if (distance + 1e-9 < pureHeight) atLeastHeight = false;
-        if (distance < previous - 1e-9) monotonic = false;
-        previous = Math.max(previous, distance);
+        const bounds = computePlayBounds(PLAYFIELD, fov, aspect);
+        const halfViewH = distances[aspects.indexOf(aspect)] * tanHalf;
+        const halfViewW = halfViewH * aspect;
+
+        if (bounds.halfWidth > previous + 1e-9) growsWithAspect = false;
+        previous = bounds.halfWidth;
+
+        if (Math.abs(bounds.halfWidth - (halfViewW - PLAYFIELD.sideMargin)) > 1e-9)
+            spansMinusMargin = false;
     }
-    check('fit distance never dips below the pure-height distance', atLeastHeight);
-    check('fit distance is monotonic non-decreasing as aspect narrows', monotonic);
+    check('field width narrows as the aspect narrows', growsWithAspect);
+    check('field spans the full width minus the side margin', spansMinusMargin);
 
     let everyCornerInside = true;
     for (const aspect of aspects) {
-        const distance = createCamera(aspect).position.z;
-        const halfViewH = distance * tanHalf;
+        const bounds = computePlayBounds(PLAYFIELD, fov, aspect);
+        const halfViewH = createCamera(aspect).position.z * tanHalf;
         const halfViewW = halfViewH * aspect;
 
         for (const [dx, dy] of [
-            [-halfWidth, -halfHeight],
-            [halfWidth, -halfHeight],
-            [halfWidth, halfHeight],
-            [-halfWidth, halfHeight],
+            [-bounds.halfWidth, -bounds.halfHeight],
+            [bounds.halfWidth, -bounds.halfHeight],
+            [bounds.halfWidth, bounds.halfHeight],
+            [-bounds.halfWidth, bounds.halfHeight],
         ] as const) {
             const ndcX = dx / halfViewW;
-            const ndcY = (dy - centerY) / halfViewH;
+            const ndcY = (dy - bounds.centerY) / halfViewH;
             if (Math.abs(ndcX) > 1 || Math.abs(ndcY) > 1) everyCornerInside = false;
         }
     }
-    check('every arena corner lands inside NDC at all target aspects', everyCornerInside);
-
-    const portrait = createCamera(9 / 16).position.z;
-    const landscape = createCamera(16 / 9).position.z;
-    const drift = Math.abs(portrait - landscape) / Math.max(portrait, landscape);
-    check(
-        'camera distance drifts < 15% between 9:16 and 16:9',
-        drift < 0.15,
-        `drift=${drift.toFixed(3)}`,
-    );
+    check('every field corner lands inside NDC at all target aspects', everyCornerInside);
 
     // Regression: framing must not move the play plane.
     const reframed = createCamera(16 / 9);
-    applyFraming(reframed, PLAY_BOUNDS, 9 / 16);
+    createPlayField(reframed).reframe(9 / 16);
     const project = createSwipeProjector(reframed);
     const out = new Vector3();
     project(0.3, -0.2, out);

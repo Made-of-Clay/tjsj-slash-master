@@ -1,50 +1,70 @@
 import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three/webgpu';
-import { CAMERA, GAME_PLANE_DEPTH, PLAY_BOUNDS } from '../config';
+import { CAMERA, GAME_PLANE_DEPTH, PLAYFIELD } from '../config';
 
-/** The world-space arena the camera must keep fully in frame. */
+/** The world-space playfield rectangle, on the play plane. */
 export interface PlayBounds {
     readonly halfWidth: number;
     readonly halfHeight: number;
     readonly centerY: number;
 }
 
-/**
- * Distance at which a view-perpendicular plane with these half-extents fills the
- * frustum for `aspect`.
- *
- * Two constraints compete: the height must fit (`dHeight`) and the width must fit
- * (`dWidth`). The larger wins — that is the fit-bounds policy (step 2 decision
- * B): the whole arena is always visible, and extra space at wide aspects becomes
- * background margin.
- */
-export function computeFitDistance(
-    halfWidth: number,
-    halfHeight: number,
-    fovDeg: number,
-    aspect: number,
-): number {
-    const tanHalfFov = Math.tan((fovDeg * Math.PI) / 180 / 2);
-    const distanceForHeight = halfHeight / tanHalfFov;
-    const distanceForWidth = halfWidth / (tanHalfFov * aspect);
-    return Math.max(distanceForHeight, distanceForWidth);
+/** The device-independent description of the playfield. */
+export interface PlayFieldSpec {
+    readonly halfHeight: number;
+    readonly centerY: number;
+    readonly sideMargin: number;
+}
+
+/** Live playfield: current bounds plus the reframe that recomputes them. */
+export interface PlayField {
+    /** Current bounds. Reframing writes in place, so held references stay valid. */
+    readonly bounds: PlayBounds;
+    /** Recompute the bounds for `aspect`, reframe `camera`, return the bounds. */
+    reframe(aspect: number): PlayBounds;
+}
+
+function tanHalfFov(fovDeg: number): number {
+    return Math.tan((fovDeg * Math.PI) / 180 / 2);
 }
 
 /**
- * Places the camera straight-on so `bounds` fits the viewport exactly.
+ * Playfield bounds for `aspect` (full-width policy, step 2 course correction).
  *
- * Called on construction and on every resize: camera distance depends on aspect,
- * so a resize must re-derive it, not just refresh the projection matrix. The
- * play plane stays at `GAME_PLANE_DEPTH`, so the swipe projector is unaffected.
+ * The vertical extent is fixed by `spec.halfHeight`; the horizontal extent is
+ * whatever the viewport shows at the play plane, less `spec.sideMargin` at each
+ * edge so an object centred inside is never partially cut off. Wide screens get
+ * a wider field instead of background margin.
  */
-export function applyFraming(camera: PerspectiveCamera, bounds: PlayBounds, aspect: number): void {
+export function computePlayBounds(spec: PlayFieldSpec, fovDeg: number, aspect: number): PlayBounds {
+    const halfViewHeight = viewDistance(spec, fovDeg) * tanHalfFov(fovDeg);
+    const halfViewWidth = halfViewHeight * aspect;
+    const halfWidth = Math.max(halfViewWidth - spec.sideMargin, 0);
+
+    return { halfWidth, halfHeight: spec.halfHeight, centerY: spec.centerY };
+}
+
+/** Camera distance: the fixed half-height through the FOV, plus the edge margin. */
+function viewDistance(spec: PlayFieldSpec, fovDeg: number): number {
+    return spec.halfHeight / tanHalfFov(fovDeg) + CAMERA.margin;
+}
+
+/**
+ * Places the camera straight-on at its constant distance and returns the bounds
+ * the viewport exposes for `aspect`.
+ *
+ * The distance does not depend on aspect — the height is always the binding
+ * dimension — so a resize only changes the projection aspect and the derived
+ * width, never the camera distance.
+ */
+function frameCamera(camera: PerspectiveCamera, spec: PlayFieldSpec, aspect: number): PlayBounds {
     camera.aspect = aspect;
     camera.updateProjectionMatrix();
 
-    const distance =
-        computeFitDistance(bounds.halfWidth, bounds.halfHeight, camera.fov, aspect) + CAMERA.margin;
+    const distance = viewDistance(spec, camera.fov);
+    camera.position.set(0, spec.centerY, distance);
+    camera.lookAt(0, spec.centerY, 0);
 
-    camera.position.set(0, bounds.centerY, distance);
-    camera.lookAt(0, bounds.centerY, 0);
+    return computePlayBounds(spec, camera.fov, aspect);
 }
 
 /**
@@ -52,12 +72,36 @@ export function applyFraming(camera: PerspectiveCamera, bounds: PlayBounds, aspe
  * OrbitControls would also capture the canvas pointer that Input owns.
  *
  * Straight-on (decision A) so the fit math is exact; distance is set by
- * applyFraming, not hardcoded.
+ * `frameCamera`, not hardcoded.
  */
-export function createCamera(aspect: number): PerspectiveCamera {
+export function createCamera(aspect: number, spec: PlayFieldSpec = PLAYFIELD): PerspectiveCamera {
     const camera = new PerspectiveCamera(CAMERA.fov, aspect, CAMERA.near, CAMERA.far);
-    applyFraming(camera, PLAY_BOUNDS, aspect);
+    frameCamera(camera, spec, aspect);
     return camera;
+}
+
+/**
+ * Live playfield for the app. Owns the one mutable `bounds` object so gameplay
+ * systems (spawner, collision) can hold a reference that stays current across
+ * resizes.
+ */
+export function createPlayField(
+    camera: PerspectiveCamera,
+    spec: PlayFieldSpec = PLAYFIELD,
+): PlayField {
+    const bounds: { halfWidth: number; halfHeight: number; centerY: number } = {
+        halfWidth: 0,
+        halfHeight: spec.halfHeight,
+        centerY: spec.centerY,
+    };
+
+    function reframe(aspect: number): PlayBounds {
+        bounds.halfWidth = frameCamera(camera, spec, aspect).halfWidth;
+        return bounds;
+    }
+
+    reframe(camera.aspect);
+    return { bounds, reframe };
 }
 
 /**
@@ -88,11 +132,15 @@ export function createSwipeProjector(
 }
 
 /**
- * Keeps the drawing buffer and camera aspect matched to the canvas.
+ * Keeps the drawing buffer, camera aspect and playfield bounds matched to the
+ * canvas.
  *
  * Driven by resize/orientation events rather than read every frame: reading
  * clientWidth per frame forces a layout flush, and a canvas that hasn't been
  * resized cannot have a new size.
+ *
+ * `onReframe` fires after every reframe (with the new bounds), so callers can
+ * redraw anything derived from bounds — e.g. the debug rect.
  *
  * Owns its window listeners for the page's lifetime — the game never tears down.
  */
@@ -102,8 +150,8 @@ export function createViewportSync(
         getPixelRatio(): number;
         setSize(w: number, h: number, updateStyle?: boolean): void;
     },
-    camera: PerspectiveCamera,
-    bounds: PlayBounds = PLAY_BOUNDS,
+    playfield: PlayField,
+    onReframe?: (bounds: PlayBounds) => void,
 ): () => void {
     let dirty = true;
 
@@ -134,8 +182,8 @@ export function createViewportSync(
             renderer.setSize(width, height, false);
         }
 
-        // Distance depends on aspect, so framing is re-derived on every resize,
-        // not just the projection matrix.
-        applyFraming(camera, bounds, width / height);
+        // The derived width and the projection aspect both depend on the canvas
+        // aspect, so the whole field is re-derived on every resize.
+        onReframe?.(playfield.reframe(width / height));
     };
 }

@@ -5,6 +5,15 @@ Plan for [PLAN.md](../PLAN.md) §2. Extends it, doesn't replace it.
 - Scope: fixed camera, background, lighting/material setup, play area bounds, responsive viewport. Steps 3–10 untouched.
 - Target: a framed, bounded, themeable empty stage that step 3 can launch cubes into without rewriting anything.
 
+> **Course correction (2026-10-16, [You]).** Decision B flipped from
+> fit-bounds to **full-width**: the playfield now spans the screen width (with a
+> small side margin so edge objects are not clipped) instead of leaving
+> background margin at wide aspects. Decision D (portrait-first proportions) is
+> superseded: the height is now the fixed design dimension and the width is
+> derived from the aspect, so the camera distance is constant and wide screens
+> reveal a wider field. The fit-bounds narrative below is kept as history; the
+> decisions table and AGENTS.md current state reflect the shipped policy.
+
 Owner tags: **[I]** assistant, **[You]** user, **[Pair]** I scaffold, you decide/tune.
 Workstreams run **sequentially A → B → C → D → E → F**, one per session. Each has a self-contained "Session start" block so a fresh session can begin without re-reading everything.
 
@@ -12,9 +21,9 @@ Workstreams run **sequentially A → B → C → D → E → F**, one per sessio
 
 PLAN.md lists five bullets; four are structurally done in step 1 (`rendering/Camera.ts` exists, `rendering/Scene.ts` has lights, viewport sync exists). The real work:
 
-1. **Hard problem: keep a fixed world-space play area fully framed on every aspect ratio.** A fixed camera + fixed FOV shows a *narrower* world slice on a portrait phone than on a desktop monitor. Spawn near a play edge on desktop → invisible on a phone → unfair. Fix is **fit-to-bounds**: derive camera distance from the bounds and the current aspect so the arena is always fully visible.
+1. **Hard problem: make the play area behave across aspect ratios.** A fixed camera + fixed FOV shows a *narrower* world slice on a portrait phone than on a desktop monitor. The shipped fix is **full-width**: hold the vertical design extent fixed, derive the width from the aspect, and keep the camera at a constant distance — so wide screens get a wider field rather than a letterboxed one.
 2. **Decision A — camera style:** straight-on modest perspective vs. the slight downward tilt step 1 has.
-3. **Decision B — aspect policy:** fit the arena with background margin vs. fill the screen.
+3. **Decision B — aspect policy:** fit the arena with background margin *(original)* vs. fill the screen *(shipped, see course correction)*.
 
 Two background sources currently fight: `Scene.background` (opaque color) **and** a CSS gradient behind the canvas. The canvas is opaque, so the CSS gradient is dead. Step 2 picks one source of truth.
 
@@ -23,12 +32,12 @@ Two background sources currently fight: `Scene.background` (opaque color) **and*
 | # | Decision | Choice | Rationale |
 | - | -------- | ------ | --------- |
 | A | Camera | Straight-on modest perspective | Tilt's fit math is a trapezoid; not worth it before step 9. Keeps `z = 0` play plane view-perpendicular, so fit math is exact and testable. |
-| B | Aspect policy | Fit-bounds | Fair difficulty across devices. Play area always fully visible; extra space at wide aspects becomes background margin. |
+| B | Aspect policy | **Full-width** (was fit-bounds) | Field spans the screen width; the fixed height keeps world scale identical across devices. Wide screens get a wider field, not background margin. `sideMargin` guards edge objects from clipping. |
 | C | Background | `scene.backgroundNode` (TSL) | Themeable, no extra geometry, exercises the TSL skill step 8 needs. Cost is one full-screen fragment (no post-processing). |
-| D | Play area proportions | Tall, portrait-first (`Wy > Wx`) | Keeps the limiting fit dimension stable across 9:16 and 16:9, so camera distance barely moves between orientations. |
+| D | Play area proportions | **Height fixed, width derived from aspect** (was portrait-first `Wy > Wx`) | Height is the design dimension; width follows the viewport. Camera distance is constant, so it never lurches between orientations. |
 | E | Shadow maps | No | Matches `docs/PERF-BUDGET.md`. WebGPU node shadows need explicit setup and step 2 has no flat-scene problem to solve. |
 
-Portrait-first reasoning: with tall bounds the width is the binding constraint in portrait and the height is binding in landscape; the two distances land close, so the camera does not lurch between orientations. Wide bounds would make portrait distance huge and objects tiny.
+Full-width reasoning (shipped): the vertical extent is fixed (`PLAYFIELD.halfHeight`), so it is always the binding fit dimension and the camera distance is the same on every aspect — no lurch. Width is derived as the visible width at the play plane minus `sideMargin`, so the field always reaches both screen edges without clipping edge objects.
 
 ## Already in place — no work
 
@@ -43,7 +52,7 @@ Portrait-first reasoning: with tall bounds the width is the binding constraint i
 ## Files touched
 
 ```
-src/config.ts                     CAMERA / PLAY_BOUNDS / BACKGROUND / DEBUG blocks       [I]
+src/config.ts                     CAMERA / PLAYFIELD / BACKGROUND / DEBUG blocks        [I]
 src/rendering/Camera.ts           fit math + reframe on aspect change                    [I] (decision A by [You])
 src/rendering/Scene.ts            palette-driven lights; backgroundNode assignment       [I] + [You] tuning
 src/rendering/Materials.ts        createBackgroundNode(palette)                          [You] body, [I] summon
@@ -75,7 +84,7 @@ CHANGELOG.md / README.md          entry + link                                  
 - [I] Make the camera straight-on: position `(0, cy, z)`, target `(0, cy, 0)` where `cy` is the vertical centre of `PLAY_BOUNDS`. Drop the step-1 tilt.
 - [You] Tune in `config.ts` with `pnpm dev` open:
   - `CAMERA_FOV` (start 60).
-  - `PLAY_BOUNDS` half-extents (start `Wx = 3.5`, `Wy = 7`).
+  - `PLAYFIELD` half-extents (start `halfHeight = 7`; width derived, `sideMargin = 0.6`).
   - Safety `margin` added to the fit distance (start 1.0).
 - [You] Decide the vertical placement: should the arena sit centred, or low with headroom for arcs?
 
@@ -171,12 +180,12 @@ Cubes read clearly against the background; no blown highlights; the look survive
 **Prerequisite:** A merged (bounds + fit), D merged (lighting) so the bounds read against the final look.
 
 ### Session start
-- Read: `src/config.ts` (PLAY_BOUNDS), `src/rendering/Camera.ts`, `src/main.ts`.
+- Read: `src/config.ts` (PLAYFIELD), `src/rendering/Camera.ts`, `src/main.ts`.
 - Run: `pnpm dev`.
 
 ### Work
-- [I] New `src/rendering/PlayArea.ts`: allocation-free `contains(bounds, x, y)` / `clampToBounds(bounds, out)`, plus a `LineLoop` rect sized to `PLAY_BOUNDS`, gated behind `DEBUG_PLAYFIELD` in `config.ts`.
-- [You] Set the final `PLAY_BOUNDS` numbers and the **launch line** (`minY`, where step 3 objects will appear); confirm the drawn rect matches.
+- [I] New `src/rendering/PlayArea.ts`: allocation-free `contains(bounds, x, y)` / `clampToBounds(bounds, out)`, plus a `Line` rect sized to the current bounds (redrawn on reframe), gated behind `DEBUG_PLAYFIELD` in `config.ts`.
+- [You] Set the final `PLAYFIELD.halfHeight` + `sideMargin` (width is derived) and the **launch line** (`minY`, where step 3 objects will appear); confirm the drawn rect matches.
 - [You] Decide whether the swipe projector or input should ignore points outside bounds now, or defer to step 5 collision.
 
 ### Success signal
@@ -234,7 +243,7 @@ ls dist/assets | grep -E 'draco|basis|ktx2' # expect no output
 
 `scripts/verify-playfield.ts` asserts:
 
-- `computeFitDistance` is monotonic in aspect and always ≥ the pure-height distance.
+- Full-width policy: camera distance is constant across aspects; the derived width is monotonic in aspect and always spans the visible width minus `sideMargin`.
 - Projected `PLAY_BOUNDS` corners land inside NDC across the aspect matrix (21:9, 16:9, 4:3, 1:1, 3:4, 9:16, 9:19.5).
 - `contains`/`clampToBounds` are correct at edges and out-of-range inputs.
 - The swipe projector still lands exactly on `z = GAME_PLANE_DEPTH` (regression: framing must not move the play plane).

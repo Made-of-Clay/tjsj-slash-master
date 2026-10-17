@@ -9,7 +9,7 @@ Fruit-Ninja–style 2.5D slicing game (Three.js Journey Challenge: Halloween, Oc
 Built in numbered steps 1–10 (`PLAN.md`); each step has a detailed plan in `docs/`.
 
 **Stack:** Three.js `0.185.1` (`WebGPURenderer` + TSL), TypeScript, Vite, pnpm, Oxlint + Oxfmt, PWA.
-Play plane is `z = 0`; camera is straight-on modest perspective; portrait-first tall play area.
+Play plane is `z = 0`; camera is straight-on modest perspective; full-width play area (height fixed, width derived from aspect).
 
 ## Current state — Step 2 (`docs/PLAN-STEP-2-playfield.md`)
 
@@ -40,6 +40,12 @@ Workstreams run **sequentially A → B → C → D → E → F** (one per sessio
   `pnpm verify:playfield` wired; CHANGELOG/README/PERF-BUDGET updated.
 - **Blade trail** (step-4 visual) was done early: `src/rendering/BladeTrail.ts` +
   `Input` stroke handlers (`3102827`).
+- **Course correction (2026-10-16, [You], uncommitted):** Decision B flipped to
+  **full-width**. `PLAY_BOUNDS` → `PLAYFIELD` (`{ halfHeight, centerY, sideMargin }`);
+  `computeFitDistance`/`applyFraming` → `computePlayBounds` + `createPlayField`
+  (constant camera distance); `createViewportSync` reframes the live `playfield` and
+  redraws the debug rect via `writeDebugRect`. Both harnesses rewritten. Also added
+  a temporary `src/rendering/DevCube.ts` lit subject (tilted 45° on X, spinning on Y).
 
 ### NEXT: step-2 [You] sign-offs, then step 3 (object launching)
 
@@ -48,25 +54,25 @@ Step-2 code is complete; these are human calls, not code:
 1. [You] Tune `LIGHTING` + `halloween.ts` palette by eye (placeholder is gone —
    re-add one locally or wait for step-3 cubes as the lit subject); pick
    `TONE_MAPPING` (`'aces'` default, `'none'`/`'neutral'` available).
-2. [You] Set final `PLAY_BOUNDS` numbers + `LAUNCH_LINE_Y`; confirm the drawn
-   rect matches the numbers.
+2. [You] Set final `PLAYFIELD.halfHeight` + `sideMargin` (width is derived) +
+   `LAUNCH_LINE_Y`; confirm the drawn rect matches.
 3. [You] Decide: projector/input ignores out-of-bounds points now, or defers to
    step 5 collision (currently defers).
-4. [You] Confirm Decision B (fit-bounds) across the aspect matrix + on device
+4. [You] Confirm full-width (Decision B) across the aspect matrix + on device
    (`pnpm preview:mobile`), both renderer backends.
 
 No workstream to implement next — step 3 (`docs/` plan TBD) starts fresh.
 
 ## Locked decisions (Step 2)
 
-A straight-on perspective · B fit-bounds aspect policy · C background = `scene.backgroundNode` (TSL, not a plane) · D tall portrait-first bounds · E no shadow maps.
+A straight-on perspective · B **full-width** aspect policy (was fit-bounds) · C background = `scene.backgroundNode` (TSL, not a plane) · D **height fixed, width derived from aspect** (was portrait-first bounds) · E no shadow maps.
 
 ## Commands
 
 ```
 pnpm dev                 # dev server
 pnpm build               # production build (also check no draco/basis in dist/assets)
-pnpm verify:foundation   # bun scripts/verify-foundation.ts — 52 foundation checks
+pnpm verify:foundation   # bun scripts/verify-foundation.ts — 58 foundation checks
 pnpm lint                # oxlint
 pnpm fmt                 # oxfmt (write); use --check to verify
 ```

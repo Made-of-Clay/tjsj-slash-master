@@ -43,7 +43,7 @@ Foundation checks (loop, input, pool, swipe projector)
 pnpm verify:foundation
 ```
 
-Playfield checks (fit math, play-area bounds, debug rect, projector)
+Playfield checks (full-width bounds derivation, contains/clamp, debug rect, projector)
 
 ```bash
 pnpm verify:playfield

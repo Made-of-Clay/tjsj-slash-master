@@ -1,10 +1,10 @@
-import { BufferGeometry, Line, LineBasicMaterial, Vector3 } from 'three/webgpu';
+import { BufferAttribute, BufferGeometry, Line, LineBasicMaterial } from 'three/webgpu';
 import type { PlayBounds } from './Camera';
 
 /**
  * The play-area contract step 3's `Spawner` consumes: pure, allocation-free
  * bounds tests. Kept out of `game/` because the bounds are a rendering-space
- * concern (world-space arena), not a gameplay rule.
+ * concern (world-space field), not a gameplay rule.
  */
 
 /**
@@ -45,6 +45,31 @@ export function clampToBounds<T extends ClampTarget>(bounds: PlayBounds, out: T)
     return out;
 }
 
+/** Four corners plus a repeat of the first, to close the outline. */
+const CORNERS: ReadonlyArray<readonly [number, number]> = [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+    [-1, -1],
+];
+
+/**
+ * Rewrites `rect`'s geometry to outline the current `bounds` on the play plane
+ * (`z = 0`). Called on every resize, since the playfield width is derived from
+ * the aspect.
+ */
+export function writeDebugRect(rect: Line, bounds: PlayBounds): void {
+    const { halfWidth, halfHeight, centerY } = bounds;
+    const position = rect.geometry.getAttribute('position') as BufferAttribute;
+
+    CORNERS.forEach(([sx, sy], index) => {
+        position.setXYZ(index, sx * halfWidth, centerY + sy * halfHeight, 0);
+    });
+    position.needsUpdate = true;
+    rect.geometry.computeBoundingSphere();
+}
+
 /**
  * Debug-only closed `Line` outlining `bounds` on the play plane (`z = 0`).
  *
@@ -53,20 +78,15 @@ export function clampToBounds<T extends ClampTarget>(bounds: PlayBounds, out: T)
  * repeating the first point instead.
  *
  * The caller gates this behind `DEBUG_PLAYFIELD`, so the rect and its geometry
- * are dropped from the production bundle. Useful while tuning `PLAY_BOUNDS` to
- * confirm the drawn arena matches the numbers the fit math uses.
+ * are dropped from the production bundle. Useful while tuning `PLAYFIELD` to
+ * confirm the drawn field matches the numbers the fit math uses.
  */
 export function createDebugRect(bounds: PlayBounds): Line {
-    const { halfWidth, halfHeight, centerY } = bounds;
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(CORNERS.length * 3), 3));
 
-    const geometry = new BufferGeometry().setFromPoints([
-        new Vector3(-halfWidth, centerY - halfHeight, 0),
-        new Vector3(halfWidth, centerY - halfHeight, 0),
-        new Vector3(halfWidth, centerY + halfHeight, 0),
-        new Vector3(-halfWidth, centerY + halfHeight, 0),
-        // Repeat the first point to close the loop.
-        new Vector3(-halfWidth, centerY - halfHeight, 0),
-    ]);
+    const rect = new Line(geometry, new LineBasicMaterial({ color: 0x2ee6a0 }));
+    writeDebugRect(rect, bounds);
 
-    return new Line(geometry, new LineBasicMaterial({ color: 0x2ee6a0 }));
+    return rect;
 }

@@ -36,24 +36,34 @@ export const POOL_SIZE = 64;
 // fruit is rather than wherever the camera happens to look.
 export const GAME_PLANE_DEPTH = 0;
 
-// World-space arena, centred on the origin. Tall and portrait-first (step 2
-// decision D): the binding fit dimension stays width in portrait and height in
-// landscape, so the camera distance barely moves between orientations.
-export const PLAY_BOUNDS = {
-    halfWidth: 3.5,
+// The playfield fills the screen width (step 2 course correction, [You]): the
+// vertical extent is the fixed design dimension and the width is derived from
+// the aspect by rendering/Camera.ts. Extra-wide screens get a wider field
+// instead of background margin. The camera distance is constant — tied to
+// halfHeight — so world scale (fruit size, arc height, fall speed) is identical
+// on every device; only the horizontal reach changes.
+export const PLAYFIELD = {
+    /** Fixed vertical design extent, in world units. Sets the camera world scale. */
     halfHeight: 7,
-    /** Vertical center the camera looks straight at. Raise to push the arena low. */
+    /** Vertical center the camera looks straight at. Raise to push the field low. */
     centerY: 0,
+    /**
+     * World-space guard kept free at each side edge, so an object centred inside
+     * the bounds is never partially cut off. Must cover the largest object radius
+     * (step 3 sets fruit size).
+     */
+    sideMargin: 0.6,
 } as const;
 
-// The launch line: world Y where step 3's objects appear, at the arena's bottom
-// edge. Derived so it tracks PLAY_BOUNDS.centerY/halfHeight rather than drifting.
-export const LAUNCH_LINE_Y = PLAY_BOUNDS.centerY - PLAY_BOUNDS.halfHeight;
+// The launch line: world Y where step 3's objects appear, at the field's bottom
+// edge. Derived so it tracks PLAYFIELD.centerY/halfHeight rather than drifting.
+export const LAUNCH_LINE_Y = PLAYFIELD.centerY - PLAYFIELD.halfHeight;
 
 // ===== CAMERA =====
 // Fixed 2.5D framing, straight-on (step 2 decision A): the play plane is
-// view-perpendicular, which keeps the fit math exact. Distance is derived from
-// PLAY_BOUNDS + aspect by applyFraming in rendering/Camera.ts, never hardcoded.
+// view-perpendicular and the camera sits at a constant distance (halfHeight
+// through the FOV, plus `margin`), so it never lurches between aspects and the
+// fit math stays exact. Distance is set in rendering/Camera.ts, never hardcoded.
 export const CAMERA = {
     fov: 60,
     near: 0.1,

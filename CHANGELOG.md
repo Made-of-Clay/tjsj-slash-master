@@ -2,6 +2,17 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-16
+
+### Step 2 — playfield course correction (full-width)
+
+- Decision B flipped fit-bounds → **full-width**. `PLAY_BOUNDS` replaced by `PLAYFIELD` (`halfHeight` fixed, `centerY`, `sideMargin`); width is derived from the aspect and the camera distance is constant, so wide screens get a wider field instead of background margin.
+- `Camera.ts`: `computeFitDistance`/`applyFraming` → `computePlayBounds` + `createPlayField` (live, in-place bounds). `createViewportSync` reframes the playfield and fires an `onReframe` callback.
+- `PlayArea.ts`: debug rect is now a writable `Line` — `createDebugRect` + `writeDebugRect` (redrawn on every reframe). Still DEV-gated; confirmed dead-code-eliminated from `dist` (grep `3074208`/`2ee6a0` → none).
+- `rendering/DevCube.ts`: temporary lit subject (2-unit cube, 45° X tilt, spins on Y) for by-eye lighting / tone-mapping / palette tuning.
+- Both harnesses rewritten for the new policy (`verify-foundation` camera-fit, `verify-playfield` bounds/debug-rect).
+- Pending [human]: `PLAYFIELD.halfHeight`/`sideMargin` + launch line, lighting/palette tuning, aspect-matrix + on-device sign-off.
+
 ## 2026-10-15
 
 ### Step 2 — MVP playfield
