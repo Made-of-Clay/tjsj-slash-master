@@ -47,6 +47,10 @@ objects exist.
 - Pixel ratio capped at 2. A 3x phone display is a 2.25x fragment cost for no
   visible gain at canvas size.
 - No post-processing. Every pass is a full-screen cost, and none is on the list.
+- Background is a theme `backgroundNode` (step 2): three draws it as one
+  full-screen background mesh — a single draw call, one full-screen fragment, no
+  post pass. Swapping the palette rebuilds that one fragment; it adds no scene
+  geometry and no extra pass.
 - No shadow maps. WebGPU node shadows need explicit setup; step 2 has no use
   for them. Revisit only if a flat scene reads badly.
 - TSL over hand-written shader complexity — the same look for less maintenance.

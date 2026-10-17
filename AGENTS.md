@@ -21,22 +21,41 @@ Workstreams run **sequentially A → B → C → D → E → F** (one per sessio
 - **B — TSL gradient background:** DONE (`3d6158d`). `createBackgroundNode(palette)`
   plus `BackgroundPalette` in `src/rendering/Materials.ts`; `scene.backgroundNode`
   set in `src/rendering/Scene.ts`; dead CSS canvas gradient removed from `src/style.css`.
+- **C — Halloween palette data:** DONE (`5125a01`). `Theme.background` is typed
+  (`ThemeGradient`/`ThemeLighting` in `content/types.ts`); `halloween.ts` palette
+  threads through `Scene.ts` lights + `createBackgroundNode`.
+- **D — lighting/tone-mapping pass:** DONE (uncommitted). `TONE_MAPPING` (default
+  `'aces'`) + `TONE_MAPPING_EXPOSURE` + `LIGHTING` intensities in `config.ts`
+  (RENDER block); applied in `main.ts` (`toneMapping`/`toneMappingExposure`/
+  `outputColorSpace`). Gotcha learned: `backgroundNode` is composited through the
+  same output transform, so tone mapping shifts palette colors too — tune palette
+  with the final tone-mapping setting.
+- **E — play-area bounds + debug overlay:** DONE (uncommitted).
+  `src/rendering/PlayArea.ts` (`contains`/`clampToBounds`/`createDebugRect`);
+  `LAUNCH_LINE_Y`
+  derived in `config.ts`; `main.ts` gated `DEBUG_PLAYFIELD` block. Verified the
+  rect is dead-code-eliminated from `dist` (grep `3074208`/`2ee6a0` → none).
+- **F — close-out:** DONE (uncommitted). `placeholder.ts` + `createPulseMaterial`
+  deleted; `main.ts` is composition-only; `scripts/verify-playfield.ts` +
+  `pnpm verify:playfield` wired; CHANGELOG/README/PERF-BUDGET updated.
 - **Blade trail** (step-4 visual) was done early: `src/rendering/BladeTrail.ts` +
   `Input` stroke handlers (`3102827`).
 
-### NEXT: Workstream C — Halloween palette data
+### NEXT: step-2 [You] sign-offs, then step 3 (object launching)
 
-Goal: first real `content/` data; the data-vs-code separation the plan is built on.
+Step-2 code is complete; these are human calls, not code:
 
-1. [You] Create `src/content/themes/halloween.ts`: background top/bottom, vignette
-   tint, key/fill/rim light tints, accent colors.
-2. [You] Fix the palette field names/types — this _is_ the `Theme.background` shape.
-3. [I] Then give `Theme.background` a real type in `src/content/types.ts`
-   (replacing `unknown`) and thread the palette through `Scene.ts` lighting +
-   `createBackgroundNode`.
-   Success: swapping only the palette changes background + lights + accents, with
-   zero gameplay code change; `content/types.ts` no longer says `background: unknown`.
-   Note: gameplay must never read theme/palette data — rendering-only.
+1. [You] Tune `LIGHTING` + `halloween.ts` palette by eye (placeholder is gone —
+   re-add one locally or wait for step-3 cubes as the lit subject); pick
+   `TONE_MAPPING` (`'aces'` default, `'none'`/`'neutral'` available).
+2. [You] Set final `PLAY_BOUNDS` numbers + `LAUNCH_LINE_Y`; confirm the drawn
+   rect matches the numbers.
+3. [You] Decide: projector/input ignores out-of-bounds points now, or defers to
+   step 5 collision (currently defers).
+4. [You] Confirm Decision B (fit-bounds) across the aspect matrix + on device
+   (`pnpm preview:mobile`), both renderer backends.
+
+No workstream to implement next — step 3 (`docs/` plan TBD) starts fresh.
 
 ## Locked decisions (Step 2)
 

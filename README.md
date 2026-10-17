@@ -14,6 +14,7 @@ Docs:
 
 - [`PLAN.md`](PLAN.md) — build steps 1-10
 - [`docs/PLAN-STEP-1-foundation.md`](docs/PLAN-STEP-1-foundation.md) — step 1 plan
+- [`docs/PLAN-STEP-2-playfield.md`](docs/PLAN-STEP-2-playfield.md) — step 2 plan
 - [`docs/PERF-BUDGET.md`](docs/PERF-BUDGET.md) — frame, allocation and payload budgets, and how to measure
 
 Stack:
@@ -40,6 +41,12 @@ Foundation checks (loop, input, pool, swipe projector)
 
 ```bash
 pnpm verify:foundation
+```
+
+Playfield checks (fit math, play-area bounds, debug rect, projector)
+
+```bash
+pnpm verify:playfield
 ```
 
 Build

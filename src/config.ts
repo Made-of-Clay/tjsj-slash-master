@@ -46,6 +46,10 @@ export const PLAY_BOUNDS = {
     centerY: 0,
 } as const;
 
+// The launch line: world Y where step 3's objects appear, at the arena's bottom
+// edge. Derived so it tracks PLAY_BOUNDS.centerY/halfHeight rather than drifting.
+export const LAUNCH_LINE_Y = PLAY_BOUNDS.centerY - PLAY_BOUNDS.halfHeight;
+
 // ===== CAMERA =====
 // Fixed 2.5D framing, straight-on (step 2 decision A): the play plane is
 // view-perpendicular, which keeps the fit math exact. Distance is derived from
@@ -56,6 +60,27 @@ export const CAMERA = {
     far: 100,
     /** World units added to the fit distance so the arena never touches an edge. */
     margin: 1,
+} as const;
+
+// ===== RENDER =====
+// Tone mapping + light intensities (step 2 workstream D). Tone mapping changes
+// EVERY colour on screen — including the theme background, which is composited
+// through the same output transform — so this is set before palette judgement,
+// never after.
+
+/** How the renderer compresses HDR light into display range. */
+export type ToneMappingMode = 'none' | 'aces' | 'neutral';
+
+export const TONE_MAPPING: ToneMappingMode = 'aces';
+export const TONE_MAPPING_EXPOSURE = 1;
+
+// Three-point rig intensities. Tints come from the theme; these are the
+// code-side knobs for balancing silhouette readability against the background.
+export const LIGHTING = {
+    ambient: 0.6,
+    key: 2.4,
+    fill: 0.8,
+    rim: 1.2,
 } as const;
 
 // ===== DEBUG =====

@@ -2,6 +2,19 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-15
+
+### Step 2 — MVP playfield
+
+- Camera fit-to-bounds (`rendering/Camera.ts`): `computeFitDistance` + `applyFraming`, straight-on (decision A), re-derived from aspect on every resize. `PLAY_BOUNDS`/`CAMERA`/`LAUNCH_LINE_Y` in `config.ts`.
+- Background: `scene.backgroundNode` TSL vertical gradient + vignette (`rendering/Materials.ts`), palette-driven (decision C). Missing from `@types/three` → typed cast. Dead CSS canvas gradient removed.
+- Theme data: `content/themes/halloween.ts` + typed `Theme.background` (`ThemeGradient`/`ThemeLighting`); palette threads through `Scene.ts` lights + background. Gameplay never reads it.
+- Tone mapping (default ACES) + `LIGHTING` intensities in `config.ts`; wired in `main.ts` (`toneMapping`/`toneMappingExposure`/`outputColorSpace`). Gotcha: the background composites through the same output transform, so tone mapping shifts palette colours.
+- Play area: `rendering/PlayArea.ts` — allocation-free `contains`/`clampToBounds` (step 3 `Spawner` contract) + DEV `LineLoop` rect, dropped from the production bundle.
+- `placeholder.ts` + its pulse material deleted; `main.ts` is a composition root only.
+- Harness: `scripts/verify-playfield.ts`, `pnpm verify:playfield`. Decision E holds: no shadow maps.
+- Pending [human]: final `PLAY_BOUNDS`/launch-line numbers, lighting/palette tuning, aspect-matrix + on-device sign-off.
+
 ## 2026-10-05
 
 ### Step 1 — project foundation
