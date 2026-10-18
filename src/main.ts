@@ -1,8 +1,5 @@
 import {
     ACESFilmicToneMapping,
-    BoxGeometry,
-    Mesh,
-    MeshStandardMaterial,
     NeutralToneMapping,
     NoToneMapping,
     SRGBColorSpace,
@@ -21,6 +18,7 @@ import {
     TONE_MAPPING_EXPOSURE,
 } from './config';
 import type { ToneMappingMode } from './config';
+import type { GameObjectDefinition } from './content/types';
 import { halloween } from './content/themes/halloween';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
@@ -34,6 +32,7 @@ import {
     createViewportSync,
 } from './rendering/Camera';
 import { createDebugRect, writeDebugRect } from './rendering/PlayArea';
+import { createObjectViews, syncViews } from './rendering/ObjectViews';
 import { createScene } from './rendering/Scene';
 import { createBladeTrail } from './rendering/BladeTrail';
 import { createUiRoot } from './ui/root';
@@ -91,19 +90,23 @@ async function boot(): Promise<void> {
     const objects = new Pool(POOL_SIZE, createSpawnedObject, resetSpawnedObject);
     const physics = new Physics();
 
-    // TEMP view binding: one shared-geometry cube per slot, hidden while its
-    // object is checked out. Workstream B extracts this into
-    // rendering/ObjectViews.ts (theme accents); the sync pattern is final.
+    // Step 3B: view meshes for every pool slot. Models = theme object defs
+    // (C/D fill the list) plus the temporary stub def the volley launches;
+    // colour comes from theme accents, never from gameplay (decision D).
     const STUB_SIZE = 1;
     const STUB_RADIUS = boxBoundingRadius(STUB_SIZE);
-    const objectGeometry = new BoxGeometry(STUB_SIZE, STUB_SIZE, STUB_SIZE);
-    const objectMaterial = new MeshStandardMaterial({ color: '#ff7a45' });
-    const objectMeshes: Mesh[] = objects.items.map(() => {
-        const mesh = new Mesh(objectGeometry, objectMaterial);
-        mesh.visible = false;
-        scene.add(mesh);
-        return mesh;
-    });
+    const stubModel: GameObjectDefinition = {
+        id: 'stub',
+        score: 0,
+        category: 'target',
+        model: { kind: 'primitive', geometry: 'box', size: STUB_SIZE },
+    };
+    const objectViews = createObjectViews(
+        scene,
+        objects.items.length,
+        [stubModel, ...halloween.objects],
+        halloween.accents,
+    );
 
     // TEMP hand-launch stub: a volley at the launch line, relaunched whenever
     // the field empties, so the sim is visibly alive before Spawner exists.
@@ -135,21 +138,6 @@ async function boot(): Promise<void> {
             object.category = 'target';
             object.radius = STUB_RADIUS;
             object.active = true; // mirrors checkout; views key off it.
-        }
-    }
-
-    // Slot-aligned view sync. Runs in render, never in the sim: positions are
-    // copied from the latest state (no interpolation until step 9, decision A).
-    function syncObjectViews(): void {
-        const slots = objects.items;
-        for (let index = 0; index < slots.length; index += 1) {
-            const object = slots[index];
-            const mesh = objectMeshes[index];
-            mesh.visible = object.active;
-            if (object.active) {
-                mesh.position.copy(object.position);
-                mesh.rotation.copy(object.rotation);
-            }
         }
     }
 
@@ -194,7 +182,7 @@ async function boot(): Promise<void> {
         render: () => {
             stats?.begin();
             syncViewport();
-            syncObjectViews();
+            syncViews(objectViews, objects.items);
             renderer.render(scene, camera);
             stats?.end();
         },

@@ -5,6 +5,9 @@ export type ObjectCategory = 'target' | 'restricted';
 /**
  * How an object is drawn. A union so step 3's primitives and step 9's real
  * geometry share one field on GameObjectDefinition.
+ *
+ * `size` is the world-space extent: cube edge length, sphere diameter. It
+ * sizes the view geometry and derives the bounding radius at launch.
  */
 export type ObjectModel =
     | { kind: 'primitive'; geometry: 'box' | 'sphere'; size: number }
