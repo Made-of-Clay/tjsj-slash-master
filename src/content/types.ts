@@ -24,9 +24,39 @@ export interface GameObjectDefinition {
     model: ObjectModel;
 }
 
-/** Step 3 fills this in: intervals, launch speed range, arc variance, depth range. */
+/** `[min, max]` pair, sampled uniformly. */
+export type SpawnRange = readonly [number, number];
+
+/**
+ * A range that ramps with round progress: `early` at progress 0, `late` at
+ * progress 1, interpolated between.
+ *
+ * Course correction (2026-10-18, [You], step 3C): PLAN.md's "constant spawn
+ * interval, no ramp" is overridden — spawn cadence and batch size now grow
+ * across the round. Progress is threaded in by workstream D and stubbed until
+ * step 6 owns the round timer.
+ */
+export interface RampRange {
+    early: SpawnRange;
+    late: SpawnRange;
+}
+
+/** How the Spawner launches. Gameplay reads this; palette never reaches it. */
 export interface SpawnRules {
-    // populated in step 3
+    /** Seconds between spawn events. Shorter late = busier late. */
+    intervalRange: RampRange;
+    /** Objects per spawn event. */
+    batchRange: RampRange;
+    /** Jitter multiplier on the apex-derived launch speed (1 = exact aim). */
+    speedRange: SpawnRange;
+    /** Apex height as a fraction of full field height above the launch line. */
+    apexRange: SpawnRange;
+    /** z band around the play plane; step 5 collision must be 3D because of it. */
+    depthRange: SpawnRange;
+    /** Angular velocity per axis, rad/s. */
+    spinRange: SpawnRange;
+    /** 0..1 chance a spawn comes from a side edge instead of the launch line. */
+    sideLaunchChance: number;
 }
 
 /**

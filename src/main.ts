@@ -18,7 +18,6 @@ import {
     TONE_MAPPING_EXPOSURE,
 } from './config';
 import type { ToneMappingMode } from './config';
-import type { GameObjectDefinition } from './content/types';
 import { halloween } from './content/themes/halloween';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
@@ -90,21 +89,12 @@ async function boot(): Promise<void> {
     const objects = new Pool(POOL_SIZE, createSpawnedObject, resetSpawnedObject);
     const physics = new Physics();
 
-    // Step 3B: view meshes for every pool slot. Models = theme object defs
-    // (C/D fill the list) plus the temporary stub def the volley launches;
-    // colour comes from theme accents, never from gameplay (decision D).
-    const STUB_SIZE = 1;
-    const STUB_RADIUS = boxBoundingRadius(STUB_SIZE);
-    const stubModel: GameObjectDefinition = {
-        id: 'stub',
-        score: 0,
-        category: 'target',
-        model: { kind: 'primitive', geometry: 'box', size: STUB_SIZE },
-    };
+    // Step 3B: view meshes for every pool slot. Models = the theme's object
+    // defs; colour comes from theme accents, never from gameplay (decision D).
     const objectViews = createObjectViews(
         scene,
         objects.items.length,
-        [stubModel, ...halloween.objects],
+        halloween.objects,
         halloween.accents,
     );
 
@@ -114,11 +104,16 @@ async function boot(): Promise<void> {
     // acquire → fill → active = true contract survives.
     function launchVolley(): void {
         const { bounds } = playfield;
+        const defs = halloween.objects;
         for (let index = 0; index < 3; index += 1) {
+            // Random theme def: target and restricted both stay visible while
+            // D is unlanded, so the accent split gets eyeballed early.
+            const def = defs[Math.floor(Math.random() * defs.length)];
+            const radius = boxBoundingRadius(def.model.size);
             const object = objects.acquire();
             if (!object) return; // pool exhausted: skip, never grow.
 
-            const inset = Math.max(bounds.halfWidth - STUB_RADIUS, 0);
+            const inset = Math.max(bounds.halfWidth - radius, 0);
             const x = (Math.random() * 2 - 1) * inset;
             const vy = 17 + Math.random() * 4;
             // Closed-form aim at a jittered centre target; real aim ranges
@@ -126,7 +121,7 @@ async function boot(): Promise<void> {
             const tFlight = (2 * vy) / GRAVITY;
             const targetX = (Math.random() * 2 - 1) * 3;
 
-            object.position.set(x, LAUNCH_LINE_Y - STUB_RADIUS, 0);
+            object.position.set(x, LAUNCH_LINE_Y - radius, 0);
             object.velocity.set((targetX - x) / tFlight, vy, 0);
             object.rotation.set(0, 0, 0);
             object.angularVelocity.set(
@@ -134,9 +129,9 @@ async function boot(): Promise<void> {
                 (Math.random() - 0.5) * 6,
                 (Math.random() - 0.5) * 6,
             );
-            object.defId = 'stub';
-            object.category = 'target';
-            object.radius = STUB_RADIUS;
+            object.defId = def.id;
+            object.category = def.category;
+            object.radius = radius;
             object.active = true; // mirrors checkout; views key off it.
         }
     }

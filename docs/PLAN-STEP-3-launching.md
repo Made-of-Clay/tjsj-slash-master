@@ -8,6 +8,15 @@ Plan for [PLAN.md](../PLAN.md) §3. Extends it, doesn't replace it.
 Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
 Workstreams run **sequentially A → B → C → D → E**, one per session.
 
+> **Course correction (2026-10-18, [You], workstream C).** Decision E is
+> overridden: spawn cadence and batch size now **ramp with round progress**
+> (interval shrinks 1.2–2.0s → 0.6–1.1s, batch 1 → 2–3 across the round).
+> `SpawnRules` therefore models `intervalRange`/`batchRange` as
+> `RampRange { early, late }`; the other ranges stay constant tuples.
+> Progress (0→1) is threaded by workstream D and stubbed until step 6 owns
+> the round timer. Also: `PLAYFIELD.sideMargin` raised 0.6 → 1.0 so theme
+> objects (edge-1.0 boxes, radius 0.87) stay inside the no-clip guard.
+
 ## What step 3 is really about
 
 1. **First real sim work.** `GameLoop.fixedUpdate` currently only spins `DevCube`. This step
@@ -27,7 +36,7 @@ Workstreams run **sequentially A → B → C → D → E**, one per session.
 | B | Depth (z) | Small band, `depthRange` in `SpawnRules`, default `[-1, 1]` | PLAN §3 wants depth; step 5 collision must then be 3D sphere-vs-segment (already the plan). Band keeps objects near the slice plane. |
 | C | Meshes | Plain `Mesh` per pool slot, shared geometry, 2 shared materials (target/restricted tinted from theme accents) | 64 meshes max is nothing; `InstancedMesh` is step 8's call. No per-object material clones. |
 | D | Theme access | `main.ts` passes `theme.spawnRules`, `theme.objects`, `theme.accents` into constructors. Gameplay never imports the theme file or reads palette fields | Keeps the data/code split; `content/types.ts` is the only gameplay-visible contract. |
-| E | Difficulty | Constant spawn interval range; no ramp | Ramps are step 9. Don't smuggle one in. |
+| E | Difficulty | ~~Constant spawn interval; no ramp~~ **Ramped with round progress** (course correction 2026-10-18) | [You] wants cadence + batch to grow across the round. |
 | F | RNG | Spawner takes `rand: () => number` (default `Math.random`) | Deterministic harness in E. |
 
 ## Files touched

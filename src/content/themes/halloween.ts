@@ -24,6 +24,31 @@ export const halloween: Theme = {
         target: '#ff7a45',
         restricted: '#22c1c3',
     },
-    objects: [],
-    spawnRules: {},
+    // Step 3C: box stand-ins. Size 1.0 → bounding radius 0.87, which
+    // PLAYFIELD.sideMargin (1.0) covers, so edge spawns never clip.
+    objects: [
+        {
+            id: 'pumpkin',
+            score: 1,
+            category: 'target',
+            model: { kind: 'primitive', geometry: 'box', size: 1 },
+        },
+        {
+            id: 'skull',
+            score: -1,
+            category: 'restricted',
+            model: { kind: 'primitive', geometry: 'box', size: 1 },
+        },
+    ],
+    spawnRules: {
+        // Ramp: [You] 2026-10-18. Cadence tightens and batches grow across
+        // the round (see RampRange course correction in types.ts).
+        intervalRange: { early: [1.2, 2.0], late: [0.6, 1.1] },
+        batchRange: { early: [1, 1], late: [2, 3] },
+        speedRange: [0.9, 1.1],
+        apexRange: [0.5, 0.8],
+        depthRange: [-1, 1],
+        spinRange: [-3, 3],
+        sideLaunchChance: 0.1,
+    },
 };

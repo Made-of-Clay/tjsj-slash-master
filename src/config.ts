@@ -55,10 +55,11 @@ export const PLAYFIELD = {
     centerY: 0,
     /**
      * World-space guard kept free at each side edge, so an object centred inside
-     * the bounds is never partially cut off. Must cover the largest object radius
-     * (step 3 sets fruit size).
+     * the bounds is never partially cut off. Must cover the largest object
+     * radius: theme objects are edge-1.0 boxes (radius 0.87) as of step 3C, so
+     * this is 1.0. Raise it in lockstep with any theme that grows its objects.
      */
-    sideMargin: 0.6,
+    sideMargin: 1.0,
 } as const;
 
 // The launch line: world Y where step 3's objects appear, at the field's bottom
