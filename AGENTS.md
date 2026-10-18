@@ -11,61 +11,50 @@ Built in numbered steps 1–10 (`PLAN.md`); each step has a detailed plan in `do
 **Stack:** Three.js `0.185.1` (`WebGPURenderer` + TSL), TypeScript, Vite, pnpm, Oxlint + Oxfmt, PWA.
 Play plane is `z = 0`; camera is straight-on modest perspective; full-width play area (height fixed, width derived from aspect).
 
-## Current state — Step 2 (`docs/PLAN-STEP-2-playfield.md`)
+## Current state — Step 3 (`docs/PLAN-STEP-3-launching.md`)
 
-Workstreams run **sequentially A → B → C → D → E → F** (one per session).
+Workstreams run **sequentially A → B → C → D → E** (one per session). Step 2 is
+fully committed and closed; its pending [You] eyeball tuning (lighting/palette,
+`PLAYFIELD` numbers, aspect sign-off) is still welcome, nothing blocks on it.
 
-- **A — camera fit + bounds config:** DONE (`5d60461`). `PLAY_BOUNDS`, `CAMERA`,
-  `DEBUG_PLAYFIELD` in `src/config.ts`; `computeFitDistance`/`applyFraming`/
-  `createViewportSync` in `src/rendering/Camera.ts`; DEV arena outline in `main.ts`.
-- **B — TSL gradient background:** DONE (`3d6158d`). `createBackgroundNode(palette)`
-  plus `BackgroundPalette` in `src/rendering/Materials.ts`; `scene.backgroundNode`
-  set in `src/rendering/Scene.ts`; dead CSS canvas gradient removed from `src/style.css`.
-- **C — Halloween palette data:** DONE (`5125a01`). `Theme.background` is typed
-  (`ThemeGradient`/`ThemeLighting` in `content/types.ts`); `halloween.ts` palette
-  threads through `Scene.ts` lights + `createBackgroundNode`.
-- **D — lighting/tone-mapping pass:** DONE (uncommitted). `TONE_MAPPING` (default
-  `'aces'`) + `TONE_MAPPING_EXPOSURE` + `LIGHTING` intensities in `config.ts`
-  (RENDER block); applied in `main.ts` (`toneMapping`/`toneMappingExposure`/
-  `outputColorSpace`). Gotcha learned: `backgroundNode` is composited through the
-  same output transform, so tone mapping shifts palette colors too — tune palette
-  with the final tone-mapping setting.
-- **E — play-area bounds + debug overlay:** DONE (uncommitted).
-  `src/rendering/PlayArea.ts` (`contains`/`clampToBounds`/`createDebugRect`);
-  `LAUNCH_LINE_Y`
-  derived in `config.ts`; `main.ts` gated `DEBUG_PLAYFIELD` block. Verified the
-  rect is dead-code-eliminated from `dist` (grep `3074208`/`2ee6a0` → none).
-- **F — close-out:** DONE (uncommitted). `placeholder.ts` + `createPulseMaterial`
-  deleted; `main.ts` is composition-only; `scripts/verify-playfield.ts` +
-  `pnpm verify:playfield` wired; CHANGELOG/README/PERF-BUDGET updated.
-- **Blade trail** (step-4 visual) was done early: `src/rendering/BladeTrail.ts` +
-  `Input` stroke handlers (`3102827`).
-- **Course correction (2026-10-16, [You], uncommitted):** Decision B flipped to
-  **full-width**. `PLAY_BOUNDS` → `PLAYFIELD` (`{ halfHeight, centerY, sideMargin }`);
-  `computeFitDistance`/`applyFraming` → `computePlayBounds` + `createPlayField`
-  (constant camera distance); `createViewportSync` reframes the live `playfield` and
-  redraws the debug rect via `writeDebugRect`. Both harnesses rewritten. Also added
-  a temporary `src/rendering/DevCube.ts` lit subject (tilted 45° on X, spinning on Y).
+- **A — pooled sim + physics:** DONE (`72f13ad`). `game/SpawnedObject.ts` (state struct;
+  `resetSpawnedObject` zeroes rotation/velocity on recycle; `boxBoundingRadius`);
+  `game/Physics.ts` (`step(pool, bounds, dt)`: integrate, despawn past launch line /
+  outside sideways → `pool.release`); `Pool` gained `items` (construction-order slots,
+  view binding only — sim iterates with `each`); `GRAVITY = 20` in `PHYSICS` block.
+- **B — object views:** DONE (`95ba761`). `rendering/ObjectViews.ts`: `createObjectViews`
+  (one mesh/slot, geometry shared per model, one material per category tinted from
+  `theme.accents`) + `syncViews` in `render` (latest-state copy, no interpolation).
+- **C — spawn rules + theme objects:** DONE (`d906a88`). Real `SpawnRules`
+  (`RampRange{early,late}` for interval/batch, constant tuples for speed/apex/depth/spin,
+  `sideLaunchChance`); `halloween.ts` has `pumpkin` (target +1) / `skull` (restricted −1),
+  edge-1.0 boxes; `PLAYFIELD.sideMargin` 0.6 → 1.0 (covers radius 0.87); volley fires
+  random theme defs so both accents show.
+- **TEMP in `main.ts`:** hand-launch volley — 3 at a time, refills when the field empties,
+  closed-form aim. Workstream D replaces it wholesale with `Spawner`; only the
+  acquire → fill → `active = true` contract survives.
+- **Course correction (2026-10-18, [You]):** decision E overridden — interval/batch
+  **ramp with round progress** (interval 1.2–2.0s → 0.6–1.1s, batch 1 → 2–3). D threads
+  `progress` (0→1); stubbed until step 6 owns the round timer.
+- Blade trail (step-4 visual) done early: `src/rendering/BladeTrail.ts` + `Input` handlers.
+- `rendering/DevCube.ts` deleted — pooled cubes are the lit subject now.
+- Real models/assets are **not now**: step 7 (content) / step 9 (payload). The
+  `ObjectModel` union is already paid for — swapping art touches only `halloween.ts`.
 
-### NEXT: step-2 [You] sign-offs, then step 3 (object launching)
+### NEXT: step 3 workstream D — Spawner trajectories (then E, close-out)
 
-Step-2 code is complete; these are human calls, not code:
+- [I] Real `Spawner` (`game/Spawner.ts`): timer on `dt`, batch from `batchRange`, aim math
+  (`vy = sqrt(2g·apexΔy)`, `tFlight = 2·vy/g`, `vx = (targetX − x0)/tFlight`), side launches
+  at `sideLaunchChance`, injectable `rand`, pool exhaustion = skip, never grow. Read plan
+  workstream D before starting.
+- [You] Tune interval/batch/apex/spin + `GRAVITY` by eye.
+- [I then] Workstream E: `scripts/verify-launch.ts` + `pnpm verify:launch`, delete the TEMP
+  volley, close-out docs. Plan §E lists the exact assertions.
 
-1. [You] Tune `LIGHTING` + `halloween.ts` palette by eye (placeholder is gone —
-   re-add one locally or wait for step-3 cubes as the lit subject); pick
-   `TONE_MAPPING` (`'aces'` default, `'none'`/`'neutral'` available).
-2. [You] Set final `PLAYFIELD.halfHeight` + `sideMargin` (width is derived) +
-   `LAUNCH_LINE_Y`; confirm the drawn rect matches.
-3. [You] Decide: projector/input ignores out-of-bounds points now, or defers to
-   step 5 collision (currently defers).
-4. [You] Confirm full-width (Decision B) across the aspect matrix + on device
-   (`pnpm preview:mobile`), both renderer backends.
+## Locked decisions
 
-No workstream to implement next — step 3 (`docs/` plan TBD) starts fresh.
-
-## Locked decisions (Step 2)
-
-A straight-on perspective · B **full-width** aspect policy (was fit-bounds) · C background = `scene.backgroundNode` (TSL, not a plane) · D **height fixed, width derived from aspect** (was portrait-first bounds) · E no shadow maps.
+**Step 2:** A straight-on perspective · B **full-width** aspect policy · C background = `scene.backgroundNode` (TSL, not a plane) · D height fixed, width derived from aspect · E no shadow maps.
+**Step 3:** A no interpolation (latest-state copy) · B depth band ±1 (step 5 collision = 3D sphere-vs-segment) · C plain meshes, not `InstancedMesh` (step 8) · D `main.ts` injects theme data; gameplay never imports the theme file · E ramps with round progress *(overridden 2026-10-18)* · F injectable `rand`.
 
 ## Commands
 
@@ -73,6 +62,7 @@ A straight-on perspective · B **full-width** aspect policy (was fit-bounds) · 
 pnpm dev                 # dev server
 pnpm build               # production build (also check no draco/basis in dist/assets)
 pnpm verify:foundation   # bun scripts/verify-foundation.ts — 58 foundation checks
+pnpm verify:playfield    # bun scripts/verify-playfield.ts — fit/bounds/projector regression
 pnpm lint                # oxlint
 pnpm fmt                 # oxfmt (write); use --check to verify
 ```

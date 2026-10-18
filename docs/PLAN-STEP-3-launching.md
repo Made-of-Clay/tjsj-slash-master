@@ -30,14 +30,14 @@ Workstreams run **sequentially A → B → C → D → E**, one per session.
 
 ## Decisions (proposed — lock at session 1)
 
-| # | Decision | Proposal | Rationale |
-| - | -------- | -------- | --------- |
-| A | Interpolation | **Defer.** Ignore `alpha`; render latest sim state | 60 Hz sim on a 120 Hz screen judders slightly; fix in step 9 polish, not now. Keep `render(alpha)` signature. |
-| B | Depth (z) | Small band, `depthRange` in `SpawnRules`, default `[-1, 1]` | PLAN §3 wants depth; step 5 collision must then be 3D sphere-vs-segment (already the plan). Band keeps objects near the slice plane. |
-| C | Meshes | Plain `Mesh` per pool slot, shared geometry, 2 shared materials (target/restricted tinted from theme accents) | 64 meshes max is nothing; `InstancedMesh` is step 8's call. No per-object material clones. |
-| D | Theme access | `main.ts` passes `theme.spawnRules`, `theme.objects`, `theme.accents` into constructors. Gameplay never imports the theme file or reads palette fields | Keeps the data/code split; `content/types.ts` is the only gameplay-visible contract. |
-| E | Difficulty | ~~Constant spawn interval; no ramp~~ **Ramped with round progress** (course correction 2026-10-18) | [You] wants cadence + batch to grow across the round. |
-| F | RNG | Spawner takes `rand: () => number` (default `Math.random`) | Deterministic harness in E. |
+| #   | Decision      | Proposal                                                                                                                                               | Rationale                                                                                                                            |
+| --- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| A   | Interpolation | **Defer.** Ignore `alpha`; render latest sim state                                                                                                     | 60 Hz sim on a 120 Hz screen judders slightly; fix in step 9 polish, not now. Keep `render(alpha)` signature.                        |
+| B   | Depth (z)     | Small band, `depthRange` in `SpawnRules`, default `[-1, 1]`                                                                                            | PLAN §3 wants depth; step 5 collision must then be 3D sphere-vs-segment (already the plan). Band keeps objects near the slice plane. |
+| C   | Meshes        | Plain `Mesh` per pool slot, shared geometry, 2 shared materials (target/restricted tinted from theme accents)                                          | 64 meshes max is nothing; `InstancedMesh` is step 8's call. No per-object material clones.                                           |
+| D   | Theme access  | `main.ts` passes `theme.spawnRules`, `theme.objects`, `theme.accents` into constructors. Gameplay never imports the theme file or reads palette fields | Keeps the data/code split; `content/types.ts` is the only gameplay-visible contract.                                                 |
+| E   | Difficulty    | ~~Constant spawn interval; no ramp~~ **Ramped with round progress** (course correction 2026-10-18)                                                     | [You] wants cadence + batch to grow across the round.                                                                                |
+| F   | RNG           | Spawner takes `rand: () => number` (default `Math.random`)                                                                                             | Deterministic harness in E.                                                                                                          |
 
 ## Files touched
 
@@ -66,19 +66,23 @@ CHANGELOG.md / README.md         entry + link                                   
 **Prerequisite:** none.
 
 ### Session start
+
 - Read: `src/game/GameLoop.ts`, `src/game/Pool.ts`, `src/config.ts` (GAMEPLAY/PLAYFIELD), `docs/PERF-BUDGET.md` (Allocations).
 - Run: `pnpm dev`; confirm DevCube spins.
 
 ### Work
+
 - [I] `src/game/SpawnedObject.ts`: `{ position: Vector3, velocity: Vector3, rotation: Euler, angularVelocity: Vector3, defId: string, category: ObjectCategory, radius: number, active: boolean }`. `createSpawnedObject()` + `resetSpawnedObject(o)` zero everything (PERF-BUDGET: step 3 owns the rotation/scratch reset).
 - [I] `Physics.ts` real: `step(objects, bounds, dt)` — integrate position, `velocity.y -= GRAVITY * dt`, Euler spin, despawn when `y < LAUNCH_LINE_Y - radius && velocity.y < 0` or laterally outside bounds while moving outward. Despawn = `pool.release`. Gravity constant lands in a new `PHYSICS` config block; tune by eye.
 - [I] Wire into `main.ts`: pool of 64 states, `fixedUpdate` runs spawner (stub: hand-launch 3) + physics; despawned objects vanish. Delete `DevCube.ts` only in D — keep it as the lone visible thing until views exist.
 - [You] Tune `GRAVITY` (start ~20 — game gravity, not Earth's) against the 14-unit-tall field.
 
 ### Success signal
+
 Hand-launched cubes trace parabolas, spin, drop past the launch line and are recycled; pool `inUse` returns to 0; zero allocations in the steady-state frame (no `new` in physics path).
 
 ### Notes
+
 - `dt` is always `FIXED_STEP`; physics must not integrate twice per render frame (loop already guarantees ≤5 sub-steps).
 - Scratch vectors are module-level `const` in Physics, not per call.
 
@@ -91,17 +95,21 @@ Hand-launched cubes trace parabolas, spin, drop past the launch line and are rec
 **Prerequisite:** A merged.
 
 ### Session start
+
 - Read: `src/game/Pool.ts`, `src/rendering/DevCube.ts`, `src/content/types.ts` (accents).
 - Run: `pnpm dev`.
 
 ### Work
+
 - [I] `src/rendering/ObjectViews.ts`: `createObjectViews(scene, count, models, accents)` → one `Mesh` per pool slot (index-aligned), geometry shared per model kind, material shared per category, `visible = false` initially. `syncViews(views, objects)` copies position/rotation and toggles visibility — called from `render`, not `fixedUpdate`.
 - [You] Sanity-check the look: cubes readable against the Halloween background under both backends (`WebGPUBackend` + `WebGL2Backend`).
 
 ### Success signal
+
 Cubes appear/move/vanish in sync with sim state; two materials, one geometry in the draw list; no material/geometry allocation after startup.
 
 ### Notes
+
 - `syncViews` must tolerate `active: false` slots (hide, don't skip position write — cheap and branch-free is fine either way; pick one and comment).
 - View layer reads `accents` (theme data) — this is the rendering side; gameplay still never sees colors (Decision D).
 
@@ -114,19 +122,23 @@ Cubes appear/move/vanish in sync with sim state; two materials, one geometry in 
 **Prerequisite:** B merged.
 
 ### Session start
+
 - Read: `src/content/types.ts`, `src/content/themes/halloween.ts`, `src/config.ts`.
 - Run: `pnpm dev`.
 
 ### Work
+
 - [You] Propose `SpawnRules` fields by writing the halloween values first (fields follow data):
   `intervalRange`, `batchRange` (1..3), `speedRange`, `apexRange` (fraction of field height), `depthRange` (Decision B), `spinRange`, `sideLaunchChance`.
 - [I] Type `SpawnRules` in `content/types.ts` from your fields; replace the throwaway `{}`.
 - [You] Add halloween `objects`: one target cube + one restricted cube (`ObjectModel` primitive box, `size` ≤ `PLAYFIELD.sideMargin` covers radius), scores +1/−1.
 
 ### Success signal
+
 `content/types.ts` has a real `SpawnRules` (no empty interface); halloween defines 2 objects + rules; swapping those numbers changes behavior with zero code edits.
 
 ### Notes
+
 - `size` is edge length; radius = `size * √3/2` (bounding sphere). Spawner uses radius for despawn margin and step 5 uses it for collision.
 - Field names are the contract — step 7's christmas.ts copies them.
 
@@ -139,10 +151,12 @@ Cubes appear/move/vanish in sync with sim state; two materials, one geometry in 
 **Prerequisite:** C merged (rules exist), A merged (physics consumes states).
 
 ### Session start
+
 - Read: `src/game/Spawner.ts`, `src/content/types.ts` (SpawnRules), `src/rendering/Camera.ts` (live bounds).
 - Run: `pnpm dev`.
 
 ### Work
+
 - [I] Real `Spawner`: internal timer accumulates `dt`; on fire, draw batch size from `batchRange`, spawn each at `x ∈ bounds` (uniform), `y = LAUNCH_LINE_Y - radius`, `z ∈ depthRange`. **Aim math** (no iterative solve):
   `vy = sqrt(2·g·(apexY − y0))`, `tFlight = 2·vy/g`, `vx = (targetX − x0)/tFlight`, `vz` small random drift. `apexY ∈ centerY + apexRange·halfHeight`, `targetX ∈ bounds` inset by radius.
 - [I] Side launches: with `sideLaunchChance`, spawn at a side edge (just outside bounds), angle inward — same aim math with `targetX` pulled well inside.
@@ -150,9 +164,11 @@ Cubes appear/move/vanish in sync with sim state; two materials, one geometry in 
 - [You] Tune `intervalRange`/`batchRange`/`apexRange`/`spinRange` until it feels like Fruit Ninja: mostly bottom-up arcs, occasional side toss, never a guaranteed hit.
 
 ### Success signal
+
 Every arc stays inside the field horizontally at 21:9 and 9:16 (spawn X re-sampled against live bounds each spawn); no cube escapes through the top; ~60 FPS with a full 64-slot pool churning.
 
 ### Notes
+
 - Spawn X uses the bounds captured at spawn time; mid-flight resizes do NOT re-clamp live objects (they're ballistic — fine).
 - Spawner reads `bounds` from the live `PlayField` reference, never a copied snapshot.
 - No launch sound/score/miss penalty — steps 6+.
@@ -166,10 +182,12 @@ Every arc stays inside the field horizontally at 21:9 and 9:16 (spawn X re-sampl
 **Prerequisite:** A–D merged.
 
 ### Session start
+
 - Read: `scripts/verify-playfield.ts` (pattern), this file end to end.
 - Run: `pnpm verify:playfield`, `pnpm build`.
 
 ### Work
+
 - [I] `scripts/verify-launch.ts` (bun, same style as the other two) asserts, with the injected RNG seeded:
   - Aim math: launching at (x0, apexY, targetX) actually peaks within tolerance at apexY and lands at targetX (closed-form check of the integrator, N steps).
   - Integration: `p += v·dt` over N steps matches the closed-form ballistic curve within tolerance.
@@ -181,6 +199,7 @@ Every arc stays inside the field horizontally at 21:9 and 9:16 (spawn X re-sampl
 - [You] On-device: `pnpm preview:mobile`, portrait — arcs land in frame, 60 FPS, both backends if available.
 
 ### Success signal
+
 All harnesses green + the standard gate below; no DevCube in `dist`; device run clean.
 
 ---

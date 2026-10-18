@@ -2,6 +2,19 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-18
+
+### Step 3 — object launching (A–C done, D–E pending)
+
+- Plan: `docs/PLAN-STEP-3-launching.md`. Workstreams A–C landed; D (Spawner) and E (harness + close-out) remain.
+- **A (`72f13ad`):** `game/SpawnedObject.ts` (pooled state, full reset on recycle, `boxBoundingRadius`); `game/Physics.ts` fixed-step integration + despawn → `pool.release`; `Pool.items` getter (slot binding); `GRAVITY = 20` in new `PHYSICS` config block.
+- **B (`95ba761`):** `rendering/ObjectViews.ts` — one mesh per slot, geometry shared per model, one material per category from `theme.accents`; `syncViews` in `render`, no interpolation (decision A).
+- **C (`d906a88`):** real `SpawnRules` (`RampRange{early,late}` for interval/batch, tuples for the rest); `halloween.ts` `pumpkin` (target +1) / `skull` (restricted −1) boxes; `sideMargin` 0.6 → 1.0.
+- Course correction (decision E overridden): interval/batch **ramp with round progress** (1.2–2.0s → 0.6–1.1s, batch 1 → 2–3); `progress` stubbed until step 6.
+- `rendering/DevCube.ts` deleted — pooled cubes are the lit subject.
+- TEMP: `main.ts` hand-launch volley (3 at a time, random theme def, closed-form aim); workstream D replaces it.
+- Real models/assets: not now — step 7 (content), step 9 (payload). `ObjectModel` union already supports the swap.
+
 ## 2026-10-16
 
 ### Step 2 — playfield course correction (full-width)
