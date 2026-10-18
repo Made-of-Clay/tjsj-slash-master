@@ -42,6 +42,16 @@ export class Pool<T> {
         return this.#inUse;
     }
 
+    /**
+     * Read-only construction-order view of every slot, used or free. For
+     * one-time setup binding (workstream B binds a view mesh per slot) and
+     * per-frame view sync keyed on `SpawnedObject.active`. Sim iteration must
+     * use `each()` — only checked-out items have live state.
+     */
+    get items(): readonly T[] {
+        return this.#items;
+    }
+
     /** Undefined when exhausted. Callers decide: skip, or recycle oldest. */
     acquire(): T | undefined {
         const index = this.#free.pop();

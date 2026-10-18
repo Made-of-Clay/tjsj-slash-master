@@ -31,6 +31,12 @@ export const FPS_SMOOTHING = 0.1;
 // Objects alive at once. Step 3 tunes this against the real spawn rate.
 export const POOL_SIZE = 64;
 
+// ===== PHYSICS =====
+// Game gravity, not Earth's (step 3A): tuned by eye [You] so launch speeds in
+// the 11-14 range produce arcs that peak inside the 2*halfHeight field. Raising
+// gravity means raising launch speed too, or everything falls through.
+export const GRAVITY = 20;
+
 // ===== PLAYFIELD =====
 // The swipe ray is cast onto this depth plane, so a slice happens where the
 // fruit is rather than wherever the camera happens to look.

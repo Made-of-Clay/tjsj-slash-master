@@ -1,5 +1,8 @@
 import {
     ACESFilmicToneMapping,
+    BoxGeometry,
+    Mesh,
+    MeshStandardMaterial,
     NeutralToneMapping,
     NoToneMapping,
     SRGBColorSpace,
@@ -8,11 +11,22 @@ import {
 import type { ToneMapping } from 'three/webgpu';
 import { registerSW } from 'virtual:pwa-register';
 import './style.css';
-import { DEBUG_PLAYFIELD, MAX_PIXEL_RATIO, TONE_MAPPING, TONE_MAPPING_EXPOSURE } from './config';
+import {
+    DEBUG_PLAYFIELD,
+    GRAVITY,
+    LAUNCH_LINE_Y,
+    MAX_PIXEL_RATIO,
+    POOL_SIZE,
+    TONE_MAPPING,
+    TONE_MAPPING_EXPOSURE,
+} from './config';
 import type { ToneMappingMode } from './config';
 import { halloween } from './content/themes/halloween';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
+import { Physics } from './game/Physics';
+import { Pool } from './game/Pool';
+import { boxBoundingRadius, createSpawnedObject, resetSpawnedObject } from './game/SpawnedObject';
 import {
     createCamera,
     createPlayField,
@@ -20,7 +34,6 @@ import {
     createViewportSync,
 } from './rendering/Camera';
 import { createDebugRect, writeDebugRect } from './rendering/PlayArea';
-import { createDevCube } from './rendering/DevCube';
 import { createScene } from './rendering/Scene';
 import { createBladeTrail } from './rendering/BladeTrail';
 import { createUiRoot } from './ui/root';
@@ -73,9 +86,72 @@ async function boot(): Promise<void> {
         scene.add(debugRect);
     }
 
-    // Temporary lit subject for by-eye tuning (lighting/tone mapping/palette).
-    const devCube = createDevCube();
-    scene.add(devCube.mesh);
+    // Step 3A: pooled sim states + one fixed-step physics pass. The pool owns
+    // reset (stale velocity can't survive a recycle); physics decides despawn.
+    const objects = new Pool(POOL_SIZE, createSpawnedObject, resetSpawnedObject);
+    const physics = new Physics();
+
+    // TEMP view binding: one shared-geometry cube per slot, hidden while its
+    // object is checked out. Workstream B extracts this into
+    // rendering/ObjectViews.ts (theme accents); the sync pattern is final.
+    const STUB_SIZE = 1;
+    const STUB_RADIUS = boxBoundingRadius(STUB_SIZE);
+    const objectGeometry = new BoxGeometry(STUB_SIZE, STUB_SIZE, STUB_SIZE);
+    const objectMaterial = new MeshStandardMaterial({ color: '#ff7a45' });
+    const objectMeshes: Mesh[] = objects.items.map(() => {
+        const mesh = new Mesh(objectGeometry, objectMaterial);
+        mesh.visible = false;
+        scene.add(mesh);
+        return mesh;
+    });
+
+    // TEMP hand-launch stub: a volley at the launch line, relaunched whenever
+    // the field empties, so the sim is visibly alive before Spawner exists.
+    // Replaced wholesale by Spawner + SpawnRules in workstream D; only the
+    // acquire → fill → active = true contract survives.
+    function launchVolley(): void {
+        const { bounds } = playfield;
+        for (let index = 0; index < 3; index += 1) {
+            const object = objects.acquire();
+            if (!object) return; // pool exhausted: skip, never grow.
+
+            const inset = Math.max(bounds.halfWidth - STUB_RADIUS, 0);
+            const x = (Math.random() * 2 - 1) * inset;
+            const vy = 17 + Math.random() * 4;
+            // Closed-form aim at a jittered centre target; real aim ranges
+            // (apex, side launches) are workstream D's.
+            const tFlight = (2 * vy) / GRAVITY;
+            const targetX = (Math.random() * 2 - 1) * 3;
+
+            object.position.set(x, LAUNCH_LINE_Y - STUB_RADIUS, 0);
+            object.velocity.set((targetX - x) / tFlight, vy, 0);
+            object.rotation.set(0, 0, 0);
+            object.angularVelocity.set(
+                (Math.random() - 0.5) * 6,
+                (Math.random() - 0.5) * 6,
+                (Math.random() - 0.5) * 6,
+            );
+            object.defId = 'stub';
+            object.category = 'target';
+            object.radius = STUB_RADIUS;
+            object.active = true; // mirrors checkout; views key off it.
+        }
+    }
+
+    // Slot-aligned view sync. Runs in render, never in the sim: positions are
+    // copied from the latest state (no interpolation until step 9, decision A).
+    function syncObjectViews(): void {
+        const slots = objects.items;
+        for (let index = 0; index < slots.length; index += 1) {
+            const object = slots[index];
+            const mesh = objectMeshes[index];
+            mesh.visible = object.active;
+            if (object.active) {
+                mesh.position.copy(object.position);
+                mesh.rotation.copy(object.rotation);
+            }
+        }
+    }
 
     // Bounds change with aspect, so the outline is redrawn on every reframe.
     const syncViewport = createViewportSync(renderer, playfield, (bounds) => {
@@ -110,13 +186,15 @@ async function boot(): Promise<void> {
     }
 
     const loop = new GameLoop({
-        // Only the temporary dev cube so far; step 3 gives the sim real work.
         fixedUpdate: (dt) => {
-            devCube.update(dt);
+            // Refill before stepping so a fresh volley gets a full arc.
+            if (objects.inUse === 0) launchVolley();
+            physics.step(objects, playfield.bounds, dt);
         },
         render: () => {
             stats?.begin();
             syncViewport();
+            syncObjectViews();
             renderer.render(scene, camera);
             stats?.end();
         },
