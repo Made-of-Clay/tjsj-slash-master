@@ -35,7 +35,24 @@ export const POOL_SIZE = 64;
 // Game gravity, not Earth's (step 3A): tuned by eye [You] so launch speeds in
 // the 11-14 range produce arcs that peak inside the 2*halfHeight field. Raising
 // gravity means raising launch speed too, or everything falls through.
-export const GRAVITY = 20;
+export const GRAVITY = 80;
+
+// ===== SPAWN =====
+// Spawner knobs that are code-side, not theme data (theme owns SpawnRules).
+export const SPAWN = {
+    /**
+     * Peak |vz| on a launch, world units/s. The depth band (depthRange) places
+     * objects in z; this small drift keeps them moving in depth so the band
+     * reads, without letting an object wander off the play plane.
+     */
+    depthDrift: 0.4,
+    /**
+     * Where a side launch aims, as a fraction of the inset bounds measured from
+     * the *opposite* edge. 0.5 sends it to the middle of the far half: far
+     * enough to cross the field, never far enough to exit before the apex.
+     */
+    sideTargetInset: 0.5,
+} as const;
 
 // ===== PLAYFIELD =====
 // The swipe ray is cast onto this depth plane, so a slice happens where the
@@ -104,3 +121,8 @@ export const LIGHTING = {
 // Bounds rectangle and other playfield debug. Vite folds this to `false` in the
 // production build, so the debug geometry is dropped from the bundle.
 export const DEBUG_PLAYFIELD = import.meta.env.DEV;
+
+// Dev-only: log the first time the spawner is starved by a full pool. The pool
+// never grows, so this is a skip, not an error — but silence would hide a
+// game feel bug (too many objects wanted at once).
+export const DEBUG_SPAWN = import.meta.env.DEV;
