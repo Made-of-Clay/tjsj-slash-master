@@ -2,6 +2,26 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-21
+
+### Step 5 — harness + close-out (D–E)
+
+- `scripts/verify-cut.ts` + `pnpm verify:cut` (65 checks): sphere-vs-segment cases (through-center/miss/graze/endpoint/inside-span/depth-band/diagonal/t-clamp/pad), Slicer cut-once + release ordering + mixed-score multi-cut + pad end-to-end + zero-length segment, Score model, Debris spawn math (offset/velocity/tumble, wobble pinned via `rand`) + integration + floor/life despawn + drop-oldest + allocation proxy, config sanity, Spawner→`SpawnedObject.score` wiring.
+- Handoff docs: AGENTS state, CHANGELOG, README plan link.
+- Pending [human]: `CUT` knob feel by eye; on-device portrait — cuts + pieces at 60 FPS, both backends.
+
+### Step 5 — debris pieces (B–C)
+
+- **B (`77a428d`):** `game/Debris.ts` — capped piece ring (64), presentation-only: never re-sliced/scored, no pool competition. 2 pieces per cut: offset ± slice normal (0.4× parent radius), velocity = parent × `inherit` + ±normal × `separation`, opposed z-tumble + halved parent spin, one wobble draw per pair (Decision 3F). Integration mirrors Physics; despawn below launch line or `CUT.life`; drop-oldest.
+- `rendering/DebrisViews.ts` — mesh per slot; boot-built geometry cache: `GameObjectDefinition.pieces?` authored at final size, else parent geometry scaled clone (`pieceScale` baked); materials shared with ObjectViews.
+- **C:** full `CUT` config block (pad/pieceScale/inherit/separation/offset/spin/life/capacity); `createGeometry` exported; stale ObjectViews comment fixed.
+
+### Step 5 — hit test + cut (A)
+
+- Plan: `docs/PLAN-STEP-5-cutting.md`. Commit `565b017`.
+- **A:** `game/Collision.ts` — pure `segmentSphere` (3D sphere-vs-segment, scalar math, Decision 3B depth band); `game/Slicer.ts` — `cut(pool, segment)`: scan `pool.each`, first hit wins, score → pieces → release; `game/Score.ts` + `SpawnedObject.score` (launch-set, reset-zeroed); `main.ts` cuts inside the drain at the pre-move point; `DEBUG_CUT`.
+- Plan deviations: `CUT.pad` config block landed in A (Slicer needed it); injectable `rand` moved to Debris (jitter lives where pieces spawn); `pieces?` sink optional until B.
+
 ## 2026-10-20
 
 ### Step 4 — verification + close-out (D–E)
