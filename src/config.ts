@@ -31,6 +31,14 @@ export const FPS_SMOOTHING = 0.1;
 // Objects alive at once. Step 3 tunes this against the real spawn rate.
 export const POOL_SIZE = 64;
 
+// ===== ROUND =====
+// Step 6: the round clock (game/Round.ts). The spawn ramp tightens across
+// this window; [You] tunes the number.
+export const ROUND = {
+    /** Round length in seconds (PLAN §6: 30). */
+    duration: 30,
+} as const;
+
 // ===== PHYSICS =====
 // Game gravity, not Earth's (step 3A): tuned by eye [You] so launch speeds in
 // the 11-14 range produce arcs that peak inside the 2*halfHeight field. Raising

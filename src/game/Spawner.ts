@@ -115,6 +115,13 @@ export class Spawner {
         return this.#skipped;
     }
 
+    /** Back to boot state — round 2 must not start mid-cadence (step 6). */
+    reset(): void {
+        this.#timer = 0;
+        this.#skipped = 0;
+        this.#warnedExhausted = false;
+    }
+
     /**
      * Advance the spawn clock by one fixed step and fire as many whole events as
      * `dt` covers. `progress` (0..1) is the round's completion; step 6 owns the

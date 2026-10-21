@@ -49,13 +49,83 @@ canvas {
 }
 
 .ui-root {
-    /* Overlay layer for the HUD. Empty in step 1; widgets arrive in step 6. */
+    /* Overlay layer for the HUD (step 6 widgets live inside). */
     position: fixed;
     inset: 0;
     pointer-events: none;
 
-    /* Already padded for the notch, so step 6's widgets inherit it. */
+    /* Widgets inherit the notch padding via flow layout. */
     padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+
+/* Centred pair: "Score: N  ·  Time: T"; flow layout keeps safe-area padding. */
+.hud-bar {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    padding: 0.75rem 1rem;
+}
+
+.hud-score {
+    font-size: 2rem;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.hud-timer {
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Fixed so the card covers the root's padding and centres on screen. */
+.game-over {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    /* The root is pointer-events: none so swipes reach the canvas; the card
+       re-enables them while it is up, so taps stop passing through. */
+    pointer-events: auto;
+    background: rgba(3, 8, 11, 0.55);
+}
+
+/* `hidden` must win over the display above — the card starts hidden. */
+.game-over[hidden] {
+    display: none;
+}
+
+/* The whole card is the tap target (a real <button> for a11y). */
+.game-over-card {
+    display: grid;
+    gap: 0.4rem;
+    justify-items: center;
+    padding: 1.6rem 2.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    background: rgba(14, 39, 48, 0.92);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.game-over-title {
+    font-size: 1.2rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.75;
+}
+
+.game-over-score {
+    font-size: 2.8rem;
+    font-weight: 700;
+}
+
+.game-over-restart {
+    font-size: 0.95rem;
+    opacity: 0.7;
+    text-decoration: underline;
 }
 
 h1 {

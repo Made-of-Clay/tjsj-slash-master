@@ -16,6 +16,7 @@ import {
     LAUNCH_LINE_Y,
     MAX_PIXEL_RATIO,
     POOL_SIZE,
+    ROUND,
     SWIPE,
     TONE_MAPPING,
     TONE_MAPPING_EXPOSURE,
@@ -26,6 +27,7 @@ import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
 import type { SwipeSegment } from './game/Input';
 import { Physics } from './game/Physics';
+import { Round } from './game/Round';
 import { Debris } from './game/Debris';
 import { Spawner } from './game/Spawner';
 import { Pool } from './game/Pool';
@@ -44,6 +46,7 @@ import { createObjectViews, syncViews } from './rendering/ObjectViews';
 import { createDebrisViews, syncDebrisViews } from './rendering/DebrisViews';
 import { createScene } from './rendering/Scene';
 import { createBladeTrail } from './rendering/BladeTrail';
+import { createHud } from './ui/hud';
 import { createUiRoot } from './ui/root';
 
 // No-op without a service worker, so this is safe in dev as well.
@@ -150,7 +153,7 @@ async function boot(): Promise<void> {
     });
     syncViewport();
 
-    createUiRoot();
+    const hud = createHud(createUiRoot());
 
     const input = new Input(canvas, createSwipeProjector(camera));
 
@@ -210,27 +213,51 @@ async function boot(): Promise<void> {
         document.body.appendChild(stats.dom);
     }
 
+    // Step 6: the round clock. `progress` finally un-stubs the spawn ramp
+    // (Decision 3E); `over` freezes the board mid-air (Decision C) and the
+    // card's restart re-arms everything (Decision G).
+    const round = new Round(ROUND.duration);
+
+    // Every mutable system back to boot state — or round 2 silently differs
+    // from round 1. View sync picks the resets up on the next frame.
+    function restart(): void {
+        score.reset();
+        round.reset();
+        spawner.reset();
+        objects.releaseAll();
+        debris.clear();
+        swipes.clear();
+    }
+
+    hud.onRestart(restart);
+
     const loop = new GameLoop({
         fixedUpdate: (dt) => {
+            if (round.over) return;
+
             // Step 5A: drain first, before spawner/physics move anything —
             // segments are cut against pre-move positions. Once per fixed
             // step, not per render: a frame with 0 sub-steps leaves the
             // segments for the next step to consume.
             swipes.drain(cutSwipe);
-            // Round progress (0..1) is step 6's to own; 0 holds the spawn
-            // ramp at its easy end until the round timer lands. Spawner
-            // reads it to pick interval/batch from their RampRanges.
-            spawner.step(objects, playfield.bounds, dt, 0);
+            spawner.step(objects, playfield.bounds, dt, round.progress);
             physics.step(objects, playfield.bounds, dt);
             // Step 5B: pieces tumble after the sim that spawned them; the
             // launch line doubles as their floor (Physics despawn semantics).
             debris.step(dt, LAUNCH_LINE_Y);
+            // Clock last: the step that crosses the buzzer completes fully,
+            // every later step is frozen (step 6 Decision B).
+            round.step(dt);
         },
         render: () => {
             stats?.begin();
             syncViewport();
             syncViews(objectViews, objects.items);
             syncDebrisViews(debrisViews, debris.pieces);
+            // HUD reads latest state (never steps); both calls no-op when
+            // nothing changed, so the steady frame does no DOM work.
+            hud.sync(score.total, round.secondsLeft);
+            if (round.over) hud.showGameOver(score.total);
             renderer.render(scene, camera);
             stats?.end();
         },

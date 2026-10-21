@@ -73,6 +73,13 @@ export class Pool<T> {
         this.#inUse -= 1;
     }
 
+    /** Release every checked-out slot; the pool returns to boot state. */
+    releaseAll(): void {
+        this.each((item) => {
+            this.release(item);
+        });
+    }
+
     /** Iterate only the checked-out items. Allocation-free. */
     each(visit: (item: T) => void): void {
         for (let index = 0; index < this.size; index += 1) {
