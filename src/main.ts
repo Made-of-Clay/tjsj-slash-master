@@ -9,9 +9,11 @@ import type { ToneMapping } from 'three/webgpu';
 import { registerSW } from 'virtual:pwa-register';
 import './style.css';
 import {
+    CUT,
     DEBUG_CUT,
     DEBUG_PLAYFIELD,
     DEBUG_SWIPE,
+    LAUNCH_LINE_Y,
     MAX_PIXEL_RATIO,
     POOL_SIZE,
     SWIPE,
@@ -24,12 +26,13 @@ import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
 import type { SwipeSegment } from './game/Input';
 import { Physics } from './game/Physics';
+import { Debris } from './game/Debris';
 import { Spawner } from './game/Spawner';
 import { Pool } from './game/Pool';
 import { Swipes } from './game/Swipes';
 import { Slicer } from './game/Slicer';
 import { Score } from './game/Score';
-import { createSpawnedObject, resetSpawnedObject } from './game/SpawnedObject';
+import { boxBoundingRadius, createSpawnedObject, resetSpawnedObject } from './game/SpawnedObject';
 import {
     createCamera,
     createPlayField,
@@ -38,6 +41,7 @@ import {
 } from './rendering/Camera';
 import { createDebugRect, writeDebugRect } from './rendering/PlayArea';
 import { createObjectViews, syncViews } from './rendering/ObjectViews';
+import { createDebrisViews, syncDebrisViews } from './rendering/DebrisViews';
 import { createScene } from './rendering/Scene';
 import { createBladeTrail } from './rendering/BladeTrail';
 import { createUiRoot } from './ui/root';
@@ -111,6 +115,35 @@ async function boot(): Promise<void> {
         defs: halloween.objects,
     });
 
+    // Step 5B: sliced pieces are presentation, not gameplay — their own
+    // capped ring, integrated after physics, never competing with the
+    // spawner (plan Decision A). Piece bounding radii come from the same
+    // boot pass: authored `def.pieces` from their own size, the default
+    // clone scaled — mirroring the geometry resolution in DebrisViews
+    // (Decision B), so the cut path allocates nothing.
+    const pieceRadii = new Map<string, readonly [number, number]>();
+    for (const def of halloween.objects) {
+        const radiusAt = (index: number): number => {
+            const authored = def.pieces?.[index];
+            return authored
+                ? boxBoundingRadius(authored.size)
+                : boxBoundingRadius(def.model.size) * CUT.pieceScale;
+        };
+        pieceRadii.set(def.id, [radiusAt(0), radiusAt(1)]);
+    }
+
+    function radiiFor(defId: string): readonly [number, number] {
+        return pieceRadii.get(defId) ?? [0, 0];
+    }
+
+    const debris = new Debris(CUT.capacity, radiiFor);
+    const debrisViews = createDebrisViews(
+        scene,
+        CUT.capacity,
+        halloween.objects,
+        objectViews.materials,
+    );
+
     // Bounds change with aspect, so the outline is redrawn on every reframe.
     const syncViewport = createViewportSync(renderer, playfield, (bounds) => {
         if (debugRect) writeDebugRect(debugRect, bounds);
@@ -135,12 +168,16 @@ async function boot(): Promise<void> {
     input.onStrokeStart(() => swipes.beginStroke());
     input.onStrokeEnd(() => swipes.endStroke());
 
-    // Step 5A: drained segments become cuts. Score model now; the piece sink
-    // is absent until 5B's debris ring replaces it. Cuts run inside the drain
-    // — before spawner/physics move anything — so the hit test and the
-    // pieces' inherited velocity both see pre-move state (Decision 4C).
+    // Step 5: drained segments become cuts; each cut scores and spawns two
+    // debris pieces. Cuts run inside the drain — before spawner/physics move
+    // anything — so the hit test and the pieces' inherited velocity both see
+    // pre-move state (Decision 4C).
     const score = new Score();
-    const slicer = new Slicer({ score, onCut: DEBUG_CUT ? logCut : undefined });
+    const slicer = new Slicer({
+        score,
+        pieces: (parent, nx, ny) => debris.spawn(parent, nx, ny),
+        onCut: DEBUG_CUT ? logCut : undefined,
+    });
 
     // Discarded with the loop's backlog on a hidden tab, so a stale stroke
     // never hits the resumed sim. The listener lives here rather than in
@@ -185,11 +222,15 @@ async function boot(): Promise<void> {
             // reads it to pick interval/batch from their RampRanges.
             spawner.step(objects, playfield.bounds, dt, 0);
             physics.step(objects, playfield.bounds, dt);
+            // Step 5B: pieces tumble after the sim that spawned them; the
+            // launch line doubles as their floor (Physics despawn semantics).
+            debris.step(dt, LAUNCH_LINE_Y);
         },
         render: () => {
             stats?.begin();
             syncViewport();
             syncViews(objectViews, objects.items);
+            syncDebrisViews(debrisViews, debris.pieces);
             renderer.render(scene, camera);
             stats?.end();
         },

@@ -22,6 +22,14 @@ export interface GameObjectDefinition {
     score: number;
     category: ObjectCategory;
     model: ObjectModel;
+    /**
+     * Optional authored piece models for slicing (step 5 seam, Decision B).
+     * Each entry is one piece at final size — `CUT.pieceScale` applies only
+     * to the default (absent → two scaled clones of `model`). Debris spawns
+     * two pieces: extras are ignored, a missing entry falls back to the
+     * scaled clone.
+     */
+    pieces?: readonly ObjectModel[];
 }
 
 /** `[min, max]` pair, sampled uniformly. */

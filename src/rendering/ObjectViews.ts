@@ -22,7 +22,7 @@ export interface ObjectViews {
     readonly materials: Record<ObjectCategory, MeshStandardMaterial>;
 }
 
-function createGeometry(model: GameObjectDefinition['model']): BufferGeometry {
+export function createGeometry(model: GameObjectDefinition['model']): BufferGeometry {
     if (model.kind === 'geometry') {
         // Theme-owned geometry; shared, never disposed by the view layer.
         return model.geometry;
@@ -43,8 +43,7 @@ function createGeometry(model: GameObjectDefinition['model']): BufferGeometry {
  * Builds the per-slot meshes and adds them to `scene`, all invisible until
  * their object is checked out and `syncViews` runs.
  *
- * `count` is the pool size; models come from the theme (plus, temporarily,
- * the stub def the launch volley fires until workstream C/D replace it).
+ * `count` is the pool size; models come from the theme.
  */
 export function createObjectViews(
     scene: Scene,

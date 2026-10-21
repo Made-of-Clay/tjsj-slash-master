@@ -67,13 +67,27 @@ export const SWIPE = {
 } as const;
 
 // ===== CUT =====
-// Cutting (step 5A). The hit test widens each object's bounding sphere by
-// `pad` — forgiveness on the swipe path, since a zero-thickness segment
-// against a bounding sphere is stricter than a moving finger ever feels.
-// Piece knobs (pieceScale/inherit/separation/spin/life) arrive in 5B.
+// Cutting (step 5). `pad` widens each object's bounding sphere for the hit
+// test — forgiveness on the swipe path, since a zero-thickness segment
+// against a bounding sphere is stricter than a moving finger ever feels. The
+// piece knobs shape the two halves a cut leaves behind (step 5B).
 export const CUT = {
     /** World units added to an object's bounding radius for hit tests. */
     pad: 0.1,
+    /** Piece geometry scale vs the parent model (default pieces are clones). */
+    pieceScale: 0.55,
+    /** Fraction of the parent's velocity a piece keeps. */
+    inherit: 0.6,
+    /** Separation speed along the slice normal, world units/s (± per piece). */
+    separation: 2.0,
+    /** Spawn offset along ±normal, as a fraction of the parent radius. */
+    offset: 0.4,
+    /** Tumble speed around the view axis (rad/s); the pair spins opposed. */
+    spin: 4,
+    /** Seconds before a piece despawns wherever it is. */
+    life: 1.5,
+    /** Piece ring capacity — the debris budget (PERF-BUDGET table). */
+    capacity: 64,
 } as const;
 
 // ===== PLAYFIELD =====
