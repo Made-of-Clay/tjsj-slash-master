@@ -5,9 +5,9 @@ import type { Vector3 } from 'three/webgpu';
  *
  * Pure scalar math — the closest point on the segment to the sphere center,
  * then a squared-distance compare. No vectors built, no scratch state. The
- * test is genuinely 3D (Decision 3B): a swipe segment lives on the play plane
- * (z = 0) while object centers sit in the ±1 depth band, so the depth offset
- * counts against the radius instead of being projected away.
+ * test is 3D (Decision 3B): any object z offset counts against the radius.
+ * Theme data pins objects to z = 0 (chopping-bug fix 2026-10-21); restoring
+ * a band means per-plane reprojection, not just data.
  *
  * `pad` widens the sphere (cut forgiveness). The Slicer passes `CUT.pad`; it
  * is a parameter here so the harness can vary it and this stays config-free.

@@ -59,7 +59,10 @@ export interface SpawnRules {
     speedRange: SpawnRange;
     /** Apex height as a fraction of full field height above the launch line. */
     apexRange: SpawnRange;
-    /** z band around the play plane; step 5 collision must be 3D because of it. */
+    /**
+     * z band around the play plane. Keep it [0, 0] while the blade is a z=0
+     * segment — z offsets shrink reach and parallax-shift objects.
+     */
     depthRange: SpawnRange;
     /** Angular velocity per axis, rad/s. */
     spinRange: SpawnRange;

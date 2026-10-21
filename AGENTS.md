@@ -33,10 +33,18 @@ segment)` scans `pool.each`, first hit wins, score → pieces → release order;
   at final size, else scaled clone (`pieceScale`); materials shared with
   ObjectViews. Full `CUT` config block.
 - **D — verification:** `4b6a0f6`. `scripts/verify-cut.ts` + `pnpm verify:cut`
-  (65 checks): hit-test cases (graze/endpoint/depth-band/diagonal/pad),
+  (68 checks): hit-test cases (graze/endpoint/depth-band/diagonal/pad),
   cut-once and release ordering, mixed-score multi-cut, Score model, debris
   spawn math/despawn/ring/allocation proxy, config sanity, Spawner→score
   wiring.
+- **Chopping-bug fix (2026-10-21):** "some cubes aren't chopping"
+  = the z=0 blade vs the ±1 depth band — dead zone `|z| > radius+pad` (0.97),
+  in-plane reach shrinks with z (`√(0.97²−z²)` → 0.55 at z=0.8), and perspective
+  parallax shifts deep cubes away from where you aim. Fix (per [You], z=0 route —
+  simplest): theme `depthRange: [0, 0]` + `SPAWN.depthDrift: 0`, so every object
+  sits on the play plane. `Collision` stays genuinely 3D; restoring a band needs
+  a hit-model change (per-plane reprojection), noted in Collision/types/config
+  comments. 3 new harness checks guard the regression.
 - Blade trail unchanged. `progress` still stubbed at `0` until step 6 owns the
   round timer.
 - Real models/assets are **not now**: step 7 (content) / step 9 (payload).
@@ -63,7 +71,7 @@ segment)` scans `pool.each`, first hit wins, score → pieces → release order;
 ## Locked decisions
 
 **Step 2:** A straight-on perspective · B **full-width** aspect policy · C background = `scene.backgroundNode` (TSL, not a plane) · D height fixed, width derived from aspect · E no shadow maps.
-**Step 3:** A no interpolation (latest-state copy) · B depth band ±1 (step 5 collision = 3D sphere-vs-segment) · C plain meshes, not `InstancedMesh` (step 8) · D `main.ts` injects theme data; gameplay never imports the theme file · E ramps with round progress _(overridden 2026-10-18)_ · F injectable `rand`.
+**Step 3:** A no interpolation (latest-state copy) · B depth band ±1 (step 5 collision = 3D sphere-vs-segment) _(band pinned to z=0 2026-10-21 — chopping bug; collision stays 3D)_ · C plain meshes, not `InstancedMesh` (step 8) · D `main.ts` injects theme data; gameplay never imports the theme file · E ramps with round progress _(overridden 2026-10-18)_ · F injectable `rand`.
 **Step 4:** A buffer home = `game/Swipes.ts` (gameplay, DOM-free; `Input` stays a dumb adapter) · B gate = per-stroke world travel ≥ `SWIPE.gateDistance`, opens once, holds to stroke end · C drain at top of `fixedUpdate` (step 5 tests pre-move positions) · D `visibilitychange` clear lives in `main.ts`.
 **Step 5:** A pieces = separate debris ring, never the object pool (re-slice/score impossible by construction) · B piece geometry = `def.pieces?` authored at final size, else scaled clone (`pieceScale`) · C score rides on `SpawnedObject.score` (launch-set, reset-zeroed) · D hit test = pure scalar 3D sphere-vs-segment + `CUT.pad` · E cut runs inside the drain (pre-move); score + pieces fire BEFORE release.
 
@@ -76,7 +84,7 @@ pnpm verify:foundation   # bun scripts/verify-foundation.ts — 58 foundation ch
 pnpm verify:playfield    # bun scripts/verify-playfield.ts — fit/bounds/projector regression
 pnpm verify:launch       # bun scripts/verify-launch.ts — aim/integration/despawn/spawner
 pnpm verify:swipe        # bun scripts/verify-swipe.ts — buffer/gate/Input (44 checks)
-pnpm verify:cut          # bun scripts/verify-cut.ts — hit test/slicer/score/debris (65 checks)
+pnpm verify:cut          # bun scripts/verify-cut.ts — hit test/slicer/score/debris (68 checks)
 pnpm lint                # oxlint
 pnpm fmt                 # oxfmt (write); use --check to verify
 ```

@@ -41,11 +41,10 @@ export const GRAVITY = 20;
 // Spawner knobs that are code-side, not theme data (theme owns SpawnRules).
 export const SPAWN = {
     /**
-     * Peak |vz| on a launch, world units/s. The depth band (depthRange) places
-     * objects in z; this small drift keeps them moving in depth so the band
-     * reads, without letting an object wander off the play plane.
+     * Peak |vz| on a launch, world units/s. Off: z offsets shrink the blade's
+     * reach and parallax-shift objects (chopping-bug fix 2026-10-21).
      */
-    depthDrift: 0.4,
+    depthDrift: 0,
     /**
      * Where a side launch aims, as a fraction of the inset bounds measured from
      * the *opposite* edge. 0.5 sends it to the middle of the far half: far

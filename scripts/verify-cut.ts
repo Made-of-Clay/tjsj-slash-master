@@ -28,8 +28,9 @@ function check(name: string, condition: boolean, detail = ''): void {
 }
 
 import { Vector3 } from 'three/webgpu';
-import { CUT } from '../src/config.ts';
+import { CUT, SPAWN } from '../src/config.ts';
 import type { ObjectCategory, SpawnRules } from '../src/content/types.ts';
+import { halloween } from '../src/content/themes/halloween.ts';
 import type { PlayBounds } from '../src/rendering/Camera.ts';
 import { Debris } from '../src/game/Debris.ts';
 import { segmentSphere } from '../src/game/Collision.ts';
@@ -37,7 +38,11 @@ import { Slicer } from '../src/game/Slicer.ts';
 import { Score } from '../src/game/Score.ts';
 import { Spawner } from '../src/game/Spawner.ts';
 import { Pool } from '../src/game/Pool.ts';
-import { createSpawnedObject, resetSpawnedObject } from '../src/game/SpawnedObject.ts';
+import {
+    boxBoundingRadius,
+    createSpawnedObject,
+    resetSpawnedObject,
+} from '../src/game/SpawnedObject.ts';
 import type { SpawnedObject } from '../src/game/SpawnedObject.ts';
 
 /** Horizontal-by-default segment helper; z stays on the play plane. */
@@ -384,6 +389,19 @@ console.log('Config + spawn');
         launched?.score === 3,
         `score=${launched?.score}`,
     );
+
+    // Chopping-bug regression (2026-10-21): z offsets shrink the blade's
+    // reach and parallax-shift objects, so spawns stay on the play plane.
+    check(
+        'theme spawns on the play plane (depthRange [0, 0])',
+        halloween.spawnRules.depthRange[0] === 0 && halloween.spawnRules.depthRange[1] === 0,
+    );
+    check('depth drift is off (SPAWN.depthDrift 0)', SPAWN.depthDrift === 0);
+    const maxSpawnZ = Math.max(...halloween.spawnRules.depthRange.map((z) => Math.abs(z)));
+    const allReachable = halloween.objects.every(
+        (def) => maxSpawnZ <= boxBoundingRadius(def.model.size) + CUT.pad,
+    );
+    check('every spawn z is within blade reach (radius + pad)', allReachable);
 }
 
 if (failures > 0) {

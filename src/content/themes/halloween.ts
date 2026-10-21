@@ -47,7 +47,9 @@ export const halloween: Theme = {
         batchRange: { early: [1, 1], late: [2, 3] },
         speedRange: [0.9, 1.1],
         apexRange: [0.5, 0.8],
-        depthRange: [-1, 1],
+        // Pinned to the play plane: a z offset shrinks the blade's reach and
+        // parallax-shifts the object (chopping-bug fix 2026-10-21).
+        depthRange: [0, 0],
         spinRange: [-3, 3],
         sideLaunchChance: 0.1,
     },

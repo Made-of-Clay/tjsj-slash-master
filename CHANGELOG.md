@@ -4,6 +4,25 @@ Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log
 
 ## 2026-10-21
 
+### Chopping-bug fix — depth pinned to z=0
+
+- **Symptom:** "some cubes aren't chopping; inconsistent" — root cause: the
+  blade segment lives on z = 0 while spawns used `depthRange [-1, 1]` + `vz`
+  drift. Three compounding effects: (1) dead zone — `|z| > radius + pad`
+  (0.97) is mathematically unchoppable; (2) in-plane reach shrinks with depth
+  (`√(0.97² − z²)` → 0.55 at z = 0.8); (3) perspective parallax — a deep cube's
+  screen position maps to a shifted z=0 point, so aiming at what you see misses
+  the true x/y. Shallow cubes cut fine, deep ones barely or never.
+- **Fix (data-only, per [You]: keep z = 0 — simplest):** theme
+  `depthRange: [-1, 1] → [0, 0]`; `SPAWN.depthDrift: 0.4 → 0`. No Spawner code
+  change (`vz = drift × …` → 0; z sampled from `[0, 0]`).
+- `Collision`/`types`/`config` comments rewritten: the 3D test stays (Decision
+  3B), but a restored band must revisit the hit model (per-plane reprojection
+  along the camera ray), not just data.
+- `scripts/verify-cut.ts` 65 → **68 checks**: theme spawns on the play plane ·
+  depth drift off · every spawn z within blade reach (`maxZ ≤ boxBoundingRadius
+  - CUT.pad`) — all three fail if a band sneaks back without a hit-model change.
+
 ### Step 5 — harness + close-out (D–E)
 
 - `scripts/verify-cut.ts` + `pnpm verify:cut` (65 checks): sphere-vs-segment cases (through-center/miss/graze/endpoint/inside-span/depth-band/diagonal/t-clamp/pad), Slicer cut-once + release ordering + mixed-score multi-cut + pad end-to-end + zero-length segment, Score model, Debris spawn math (offset/velocity/tumble, wobble pinned via `rand`) + integration + floor/life despawn + drop-oldest + allocation proxy, config sanity, Spawner→`SpawnedObject.score` wiring.
