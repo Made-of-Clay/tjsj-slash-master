@@ -4,6 +4,19 @@ Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log
 
 ## 2026-10-20
 
+### Step 4 — verification + close-out (D–E)
+
+- `scripts/verify-swipe.ts` + `pnpm verify:swipe` (44 checks): buffer mechanics + arrival→consumption pairing, FIFO/overflow/clamp/clear, copy semantics, gate (tap/crossing/exact-threshold/fast-flick/slow-drag/stroke boundaries), allocation proxy (identity reuse ≤ ring capacity), `SWIPE.gateDistance` sanity, `Input` driven by synthetic pointer events on a minimal `EventTarget` (bun has no DOM).
+- Commit `898db5e` (D). Handoff: AGENTS state, CHANGELOG, README plan link.
+- Pending [human]: `SWIPE.gateDistance` by thumb; on-device portrait — trail latency both backends, gate feel.
+
+### Step 4 — swipe buffer + stroke gating (A–C)
+
+- Plan: `docs/PLAN-STEP-4-swipe.md`. Commit `9c52911`.
+- **A:** `game/Swipes.ts` — gated ring buffer (cap 32, copy-on-push, drop-oldest, `pending`/`drain`/`clear`); `main.ts` drains at top of `fixedUpdate` (pre-spawner/physics — step 5 tests pre-move positions), `visibilitychange` → `clear()`.
+- **B:** `SWIPE = { gateDistance: 0.5 }` world units on the play plane (0 = ungated); gate opens once per stroke and holds until stroke end, crossing segment buffered whole; `beginStroke`/`endStroke` wired from `Input`.
+- **C:** dev `onSwipe` probe removed; `Collision.ts` header → Step 5; `DEBUG_SWIPE` logs consumption only.
+
 ### Step 3 — verification + close-out (E)
 
 - `scripts/verify-launch.ts` + `pnpm verify:launch` (38 checks): aim math against the closed form, fixed-step integration vs the analytic curve, despawn (line + sideways), pool exhaustion = skip/count/no-growth, side-launch containment, arc containment at 21:9/16:9/9:16, projector regression.
