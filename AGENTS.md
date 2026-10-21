@@ -13,7 +13,7 @@ Play plane is `z = 0`; camera is straight-on modest perspective; full-width play
 
 ## Current state — Step 3 COMPLETE (`docs/PLAN-STEP-3-launching.md`)
 
-Workstreams **A → B → C → D → E** all landed (D/E uncommitted as of 2026-10-20).
+Workstreams **A → B → C → D → E** all landed (`b206114` + `6986c7e`, 2026-10-20).
 Step 2 is committed and closed; its pending [You] eyeball tuning (lighting/palette,
 `PLAYFIELD` numbers, aspect sign-off) is still welcome, nothing blocks on it.
 
@@ -39,9 +39,8 @@ Step 2 is committed and closed; its pending [You] eyeball tuning (lighting/palet
 
 ### Open items for next session
 
-- **D/E uncommitted.** Intended commits: `feat: trajectory spawner` (D) +
-  `chore: launch verification harness, close step 3` (E). Touched: `src/config.ts`,
-  `src/main.ts`, `src/game/Spawner.ts`, `scripts/verify-launch.ts`, docs. Nothing else is dirty.
+- ~~D/E uncommitted~~ **D/E landed:** `b206114` (D) + `6986c7e` (E). Working tree held only
+  step-4 plan docs at session 4A start (2026-10-20).
 - **[You] Step 3 tuning:** interval/batch/apex/spin + `GRAVITY` by eye; on-device portrait
   (`pnpm preview:mobile`) — arcs in frame, 60 FPS, both backends.
 - **[You] deferred — `GRAVITY` name (2026-10-20).** It is literal acceleration in `Physics`,
@@ -49,9 +48,9 @@ Step 2 is committed and closed; its pending [You] eyeball tuning (lighting/palet
   apex — so it tunes arc **tempo**, not height (`apexRange` is the height knob). Options:
   keep + doc · `ARC_GRAVITY` · `ARC_TEMPO` · reshape for real-gravity feel. Config comment
   is stale. **No change made.**
-- **Next step undecided:** step 4 (swipe system) vs step 5 (cutting) — no plan doc yet. Author
-  `docs/PLAN-STEP-4-*.md` at session start. `Input` + `BladeTrail` already exist; step 5
-  collision consumes the live pooled objects + `radius` (Decision 3B: 3D sphere-vs-segment).
+- **Next step:** step 4 (swipe system) — plan in `docs/PLAN-STEP-4-swipe.md`; session start there also
+  lands the two pending step-3 commits (D/E). Step 5 (cutting) consumes the drained segments:
+  collision tests the live pooled objects + `radius` (Decision 3B: 3D sphere-vs-segment).
 
 ## Locked decisions
 
