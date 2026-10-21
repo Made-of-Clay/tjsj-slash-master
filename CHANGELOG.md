@@ -2,11 +2,31 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-20
+
+### Step 3 — verification + close-out (E)
+
+- `scripts/verify-launch.ts` + `pnpm verify:launch` (38 checks): aim math against the closed form, fixed-step integration vs the analytic curve, despawn (line + sideways), pool exhaustion = skip/count/no-growth, side-launch containment, arc containment at 21:9/16:9/9:16, projector regression.
+- Aim helpers `launchVy`/`flightTime`/`aimVx` exported pure from `Spawner.ts` so the harness tests the real formula, not a copy (allocation-free).
+- PERF-BUDGET allocation item closed: `Physics` integrates in place, `Spawner` is allocation-free, `SpawnedObject` reset zeroes rotation on recycle.
+- `DevCube.ts` already gone (removed at the 3C close). Real models/assets remain step 7 (content) / step 9 (payload).
+- Pending [human]: on-device portrait run (`pnpm preview:mobile`) — arcs in frame, 60 FPS.
+
+## 2026-10-19
+
+### Step 3 — Spawner trajectories (D)
+
+- `game/Spawner.ts` real: `dt` timer; `RampRange` interval/batch interpolated on round `progress` (0→1); closed-form aim (`vy=√(2g·Δy)`, `tFlight=2vy/g`, `vx=Δx/tFlight`); side launches at `sideLaunchChance`; injectable `rand` (decision F); pool exhaustion = skip + count, never grows.
+- Aim guarantee: `apexRange` read as the `SpawnRules` contract (fraction of **full** field height above the launch line), plus a hard `vy` ceiling so no theme data can launch an arc off the top.
+- `config.ts`: `SPAWN` block (`depthDrift`, `sideTargetInset`) + `DEBUG_SPAWN` (one-time exhaustion warn).
+- `main.ts`: TEMP hand-launch volley deleted; `spawner.step(objects, bounds, dt, 0)` in `fixedUpdate`. `progress` stubbed at 0 until step 6 owns the round timer.
+- Pending [human]: tune interval/batch/apex/spin + `GRAVITY` by eye.
+
 ## 2026-10-18
 
-### Step 3 — object launching (A–C done, D–E pending)
+### Step 3 — object launching (A–C)
 
-- Plan: `docs/PLAN-STEP-3-launching.md`. Workstreams A–C landed; D (Spawner) and E (harness + close-out) remain.
+- Plan: `docs/PLAN-STEP-3-launching.md`. Workstreams A–C landed; D (Spawner) and E (harness) follow in the 10-19/10-20 entries.
 - **A (`72f13ad`):** `game/SpawnedObject.ts` (pooled state, full reset on recycle, `boxBoundingRadius`); `game/Physics.ts` fixed-step integration + despawn → `pool.release`; `Pool.items` getter (slot binding); `GRAVITY = 20` in new `PHYSICS` config block.
 - **B (`95ba761`):** `rendering/ObjectViews.ts` — one mesh per slot, geometry shared per model, one material per category from `theme.accents`; `syncViews` in `render`, no interpolation (decision A).
 - **C (`d906a88`):** real `SpawnRules` (`RampRange{early,late}` for interval/batch, tuples for the rest); `halloween.ts` `pumpkin` (target +1) / `skull` (restricted −1) boxes; `sideMargin` 0.6 → 1.0.

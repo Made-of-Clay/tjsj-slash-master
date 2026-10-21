@@ -38,9 +38,16 @@ Already handled in the foundation:
 - `Camera.createSwipeProjector` — raycaster, plane and NDC vector allocated once
   per projector, not per segment.
 
-Not yet enforced anywhere: physics scratch vectors and spawned-object rotation
-(euler/quaternion). Step 3 owns these — add them to `Pool`'s `reset` when the
-objects exist.
+Step 3 (physics + launcher):
+
+- `Physics` integrates in place on the pooled object — no scratch vectors; the
+  update order (position, then gravity) is arithmetic on fields that already
+  exist.
+- `Spawner` is allocation-free: the aim math is inline arithmetic and the only
+  state is a timer. Its `rand` seam is a function reference, injected once.
+- `SpawnedObject` reset — `pool.release` zeroes position, velocity, rotation,
+  angular velocity, `defId`, `radius` and `active`, so a recycled object can
+  never inherit stale state. This closes the rotation/scratch item step 3 owned.
 
 ## Rendering
 
@@ -121,7 +128,9 @@ perf improvement.
 ## Before calling a step done
 
 ```bash
-pnpm verify:foundation   # 52 logic checks: loop, pool, input, projector
+pnpm verify:foundation   # loop, pool, input, projector
+pnpm verify:playfield    # full-width bounds, contains/clamp, debug rect
+pnpm verify:launch       # aim math, integration, despawn, spawner guarantees
 pnpm exec tsc --noEmit && pnpm exec oxfmt --check && pnpm exec oxlint && pnpm build
 ls dist/assets | grep -E 'draco|basis|ktx2' # expect no output
 ```

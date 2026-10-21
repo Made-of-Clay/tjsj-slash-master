@@ -50,6 +50,12 @@ Playfield checks (full-width bounds derivation, contains/clamp, debug rect, proj
 pnpm verify:playfield
 ```
 
+Launch checks (aim math, integration, despawn, pool exhaustion, side launches, arc containment)
+
+```bash
+pnpm verify:launch
+```
+
 Build
 
 ```bash

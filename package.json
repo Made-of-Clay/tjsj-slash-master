@@ -14,7 +14,8 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "verify:foundation": "bun scripts/verify-foundation.ts",
-    "verify:playfield": "bun scripts/verify-playfield.ts"
+    "verify:playfield": "bun scripts/verify-playfield.ts",
+    "verify:launch": "bun scripts/verify-launch.ts"
   },
   "dependencies": {
     "stats.js": "^0.17.0",
