@@ -16,7 +16,8 @@
     "verify:foundation": "bun scripts/verify-foundation.ts",
     "verify:playfield": "bun scripts/verify-playfield.ts",
     "verify:launch": "bun scripts/verify-launch.ts",
-    "verify:swipe": "bun scripts/verify-swipe.ts"
+    "verify:swipe": "bun scripts/verify-swipe.ts",
+    "verify:cut": "bun scripts/verify-cut.ts"
   },
   "dependencies": {
     "stats.js": "^0.17.0",
