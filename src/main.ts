@@ -10,8 +10,10 @@ import { registerSW } from 'virtual:pwa-register';
 import './style.css';
 import {
     DEBUG_PLAYFIELD,
+    DEBUG_SWIPE,
     MAX_PIXEL_RATIO,
     POOL_SIZE,
+    SWIPE,
     TONE_MAPPING,
     TONE_MAPPING_EXPOSURE,
 } from './config';
@@ -19,9 +21,11 @@ import type { ToneMappingMode } from './config';
 import { halloween } from './content/themes/halloween';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
+import type { SwipeSegment } from './game/Input';
 import { Physics } from './game/Physics';
 import { Spawner } from './game/Spawner';
 import { Pool } from './game/Pool';
+import { Swipes } from './game/Swipes';
 import { createSpawnedObject, resetSpawnedObject } from './game/SpawnedObject';
 import {
     createCamera,
@@ -119,14 +123,28 @@ async function boot(): Promise<void> {
     input.onStrokeMove((w) => bladeTrail.add(w));
     input.onStrokeEnd(() => bladeTrail.end());
 
-    // Dev probe: proves pointer events reach the world-space projection. Step 4
-    // replaces it with collision tests.
-    if (import.meta.env.DEV) {
-        input.onSwipe(({ from, to }) => {
-            console.info(
-                `swipe ${from.x.toFixed(2)},${from.y.toFixed(2)} -> ${to.x.toFixed(2)},${to.y.toFixed(2)}`,
-            );
-        });
+    // Steps 4A–B: input emits on pointer events (outside the sim); segments
+    // are captured here — gated per stroke (SWIPE.gateDistance) — and drained
+    // at the top of each fixed step, so step 5's collision can test them
+    // deterministically against pre-move pool state.
+    const swipes = new Swipes(SWIPE.gateDistance);
+    input.onSwipe((segment) => swipes.push(segment));
+    input.onStrokeStart(() => swipes.beginStroke());
+    input.onStrokeEnd(() => swipes.endStroke());
+
+    // Discarded with the loop's backlog on a hidden tab, so a stale stroke
+    // never hits the resumed sim. The listener lives here rather than in
+    // Swipes so the class stays DOM-free for verify-swipe (bun).
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) swipes.clear();
+    });
+
+    // Consumed from fixedUpdate below; a function declaration so the sim path
+    // never allocates a closure per step.
+    function logSwipe(segment: SwipeSegment): void {
+        console.info(
+            `step swipe ${segment.from.x.toFixed(2)},${segment.from.y.toFixed(2)} -> ${segment.to.x.toFixed(2)},${segment.to.y.toFixed(2)}`,
+        );
     }
 
     // Dev-only overlay. Vite drops the whole block from the production build,
@@ -138,6 +156,11 @@ async function boot(): Promise<void> {
 
     const loop = new GameLoop({
         fixedUpdate: (dt) => {
+            // Step 4A: drain first, before spawner/physics move anything —
+            // step 5 tests segments against pre-move positions. Once per
+            // fixed step, not per render: a frame with 0 sub-steps leaves
+            // the segments for the next step to consume.
+            swipes.drain(DEBUG_SWIPE ? logSwipe : undefined);
             // Round progress (0..1) is step 6's to own; 0 holds the spawn
             // ramp at its easy end until the round timer lands. Spawner
             // reads it to pick interval/batch from their RampRanges.

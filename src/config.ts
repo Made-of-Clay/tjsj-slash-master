@@ -35,7 +35,7 @@ export const POOL_SIZE = 64;
 // Game gravity, not Earth's (step 3A): tuned by eye [You] so launch speeds in
 // the 11-14 range produce arcs that peak inside the 2*halfHeight field. Raising
 // gravity means raising launch speed too, or everything falls through.
-export const GRAVITY = 80;
+export const GRAVITY = 20;
 
 // ===== SPAWN =====
 // Spawner knobs that are code-side, not theme data (theme owns SpawnRules).
@@ -52,6 +52,18 @@ export const SPAWN = {
      * enough to cross the field, never far enough to exit before the apex.
      */
     sideTargetInset: 0.5,
+} as const;
+
+// ===== SWIPE =====
+// Stroke gating (step 4B). Input emits a segment per pointermove; a stroke
+// must travel `gateDistance` world units (on the play plane) before its
+// segments count, so taps and resting-finger drift never slice. Once open,
+// the gate stays open until the stroke ends — a slow deliberate drag keeps
+// cutting. Sub-pixel jitter is already filtered upstream (Input's
+// MIN_SEGMENT_NDC); this is the coarser second line, tuned by eye [You].
+export const SWIPE = {
+    /** Stroke travel before segments count, world units on the play plane. */
+    gateDistance: 0.5,
 } as const;
 
 // ===== PLAYFIELD =====
@@ -126,3 +138,7 @@ export const DEBUG_PLAYFIELD = import.meta.env.DEV;
 // never grows, so this is a skip, not an error — but silence would hide a
 // game feel bug (too many objects wanted at once).
 export const DEBUG_SPAWN = import.meta.env.DEV;
+
+// Dev-only: log each swipe segment as the fixed step consumes it — the exact
+// input step 5's collision will see.
+export const DEBUG_SWIPE = import.meta.env.DEV;
