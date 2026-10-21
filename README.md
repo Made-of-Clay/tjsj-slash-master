@@ -18,6 +18,7 @@ Docs:
 - [`docs/PLAN-STEP-3-launching.md`](docs/PLAN-STEP-3-launching.md) — step 3 plan
 - [`docs/PLAN-STEP-4-swipe.md`](docs/PLAN-STEP-4-swipe.md) — step 4 plan
 - [`docs/PLAN-STEP-5-cutting.md`](docs/PLAN-STEP-5-cutting.md) — step 5 plan
+- [`docs/PLAN-STEP-6-rules.md`](docs/PLAN-STEP-6-rules.md) — step 6 plan
 - [`docs/PERF-BUDGET.md`](docs/PERF-BUDGET.md) — frame, allocation and payload budgets, and how to measure
 
 Stack:

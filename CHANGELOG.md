@@ -4,6 +4,36 @@ Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log
 
 ## 2026-10-21
 
+### Step 6 — harness + close-out (C–D)
+
+- `scripts/verify-rules.ts` + `pnpm verify:rules` (32 checks): Round clock
+  (buzzer latches exactly once at duration and persists, ceil `secondsLeft`,
+  fractional progress, reset), `Spawner.reset` (cadence credit, skip counter),
+  `Pool.releaseAll` (reset items; empty/full/double-safe), Round × Spawner
+  (ramp bites: 7 launches vs 2 at flat progress; progress 0 vs 1 endpoints),
+  config sanity.
+- Review fixes while [human] eyeballed: `.game-over[hidden] { display: none }`
+  (CSS `display` beat the `hidden` attribute), `pointer-events: auto` on the
+  card (the root's `none` let taps fall through to the canvas), final score
+  labelled `Score N`, HUD re-laid as a centered `Score: N / Time: T` bar.
+- Handoff docs: AGENTS state, CHANGELOG, README plan link.
+
+### Step 6 — round clock + HUD + restart (A–B)
+
+- Plan: `docs/PLAN-STEP-6-rules.md` (decisions A–J locked 2026-10-21; C =
+  freeze mid-air). Commits `765e40c` + `a4cf524`.
+- **A:** `game/Round.ts` (duration/progress/over/secondsLeft/reset; rejects
+  non-positive duration); `ROUND.duration = 30`; `Spawner.reset()` +
+  `Pool.releaseAll()`; `fixedUpdate` early-returns while `over` (board freezes,
+  clock runs last so the buzzer step completes fully) and the spawn ramp runs
+  on real `round.progress` for the first time (Decision 3E un-parked).
+- **B:** `ui/hud.ts` — score/timer widgets (DOM writes only when a displayed
+  integer changes) + game-over card (real `<button>`, whole card taps
+  restart); `main.ts` `restart()` re-arms score/round/spawner, pool,
+  debris, swipes; HUD + card styles in `style.css`.
+
+## 2026-10-21
+
 ### Chopping-bug fix — depth pinned to z=0
 
 - **Symptom:** "some cubes aren't chopping; inconsistent" — root cause: the

@@ -11,62 +11,40 @@ Built in numbered steps 1–10 (`PLAN.md`); each step has a detailed plan in `do
 **Stack:** Three.js `0.185.1` (`WebGPURenderer` + TSL), TypeScript, Vite, pnpm, Oxlint + Oxfmt, PWA.
 Play plane is `z = 0`; camera is straight-on modest perspective; full-width play area (height fixed, width derived from aspect).
 
-## Current state — Step 5 COMPLETE (`docs/PLAN-STEP-5-cutting.md`)
+## Current state — Step 6 COMPLETE (`docs/PLAN-STEP-6-rules.md`)
 
-Workstreams **A → B → C → D → E** all landed (`565b017` + `77a428d` + `4b6a0f6`,
-2026-10-21). Steps 1–4 are committed and closed; their pending [You] eyeball
-tuning (gate feel, lighting/palette, `PLAYFIELD` numbers, arcs by eye) is still
-welcome, nothing blocks on it.
+Workstreams **A → B → C → D** all landed (`a4cf524` + `a088c64`, 2026-10-21).
+Steps 1–5 committed and closed (chopping-bug fix `72bb752`); pending [You]
+eyeball tuning unchanged, nothing blocks on it.
 
-- **A — hit test + cut:** `565b017`. `game/Collision.ts` pure `segmentSphere`
-  (3D sphere-vs-segment, scalar math, `CUT.pad`); `game/Slicer.ts` — `cut(pool,
-segment)` scans `pool.each`, first hit wins, score → pieces → release order;
-  `game/Score.ts` + `SpawnedObject.score` (set at launch from `def.score`,
-  zeroed in reset); `main.ts` cuts inside the drain (pre-move, Decision 4C);
-  `DEBUG_CUT` logs defId + delta.
-- **B–C — debris + seam:** `77a428d`. `game/Debris.ts` capped ring (64):
-  presentation-only pieces — never re-sliced/scored, no pool competition; 2 per
-  cut: offset ± along the slice normal, vel = parent × `inherit` + ±normal ×
-  `separation`, opposed z-tumble, one wobble draw per pair (Decision 3F);
-  `step` = GRAVITY integration, despawn below launch line / `life`, drop-oldest.
-  `rendering/DebrisViews.ts` — boot-built geometry cache: `def.pieces?` authored
-  at final size, else scaled clone (`pieceScale`); materials shared with
-  ObjectViews. Full `CUT` config block.
-- **D — verification:** `4b6a0f6`. `scripts/verify-cut.ts` + `pnpm verify:cut`
-  (68 checks): hit-test cases (graze/endpoint/depth-band/diagonal/pad),
-  cut-once and release ordering, mixed-score multi-cut, Score model, debris
-  spawn math/despawn/ring/allocation proxy, config sanity, Spawner→score
-  wiring.
-- **Chopping-bug fix (2026-10-21):** "some cubes aren't chopping"
-  = the z=0 blade vs the ±1 depth band — dead zone `|z| > radius+pad` (0.97),
-  in-plane reach shrinks with z (`√(0.97²−z²)` → 0.55 at z=0.8), and perspective
-  parallax shifts deep cubes away from where you aim. Fix (per [You], z=0 route —
-  simplest): theme `depthRange: [0, 0]` + `SPAWN.depthDrift: 0`, so every object
-  sits on the play plane. `Collision` stays genuinely 3D; restoring a band needs
-  a hit-model change (per-plane reprojection), noted in Collision/types/config
-  comments. 3 new harness checks guard the regression.
-- Blade trail unchanged. `progress` still stubbed at `0` until step 6 owns the
-  round timer.
-- Real models/assets are **not now**: step 7 (content) / step 9 (payload).
+- **A+B — round + HUD:** `a4cf524`. `game/Round.ts` — countdown, `over` latch,
+  `progress`, `secondsLeft` (ceil); `ROUND.duration = 30`; `fixedUpdate`
+  early-returns while over (freeze mid-air, Decision C), clock runs **last**
+  (Decision B), and `spawner.step(…, round.progress)` finally un-parks the
+  spawn ramp (3E). `ui/hud.ts` — centered `Score: N / Time: T` bar + game-over
+  card (final score, whole card = restart button); DOM writes only when a
+  displayed integer changes. `restart()` re-arms score/round/spawner,
+  `Pool.releaseAll()`, debris + swipes clear. Review fixes: `.game-over[hidden]`
+  (CSS display beat the `hidden` attr) and `pointer-events: auto` on the card.
+- **C — verification:** `a088c64`. `scripts/verify-rules.ts` + `pnpm verify:rules`
+  (32 checks): buzzer latches exactly once, ceil `secondsLeft`, reset round =
+  round 1 (clock + spawner cadence + skip counter), ramp bites (7 launches vs
+  2 at flat progress), `Pool.releaseAll` semantics, config sanity.
+- Missed fruit: no consequence (PLAN §6 — nothing implemented). No start
+  screen (step 9). Real models/assets: step 7; InstancedMesh: step 8.
 
 ### Open items for next session
 
-- **[You] Step 5 by eye/thumb:** `CUT` knobs (pad/separation/spin/inherit) in
-  `pnpm dev` — cuts forgiving but not magnetized, pieces read as "split" not
-  confetti; on-device portrait (`pnpm preview:mobile`) — cuts + pieces at 60 FPS,
-  both backends.
-- **[You] Step 2/3/4 tuning (carry-over):** lighting/palette, `PLAYFIELD`
-  numbers, aspect sign-off; interval/batch/apex/spin + `GRAVITY` by eye;
-  `SWIPE.gateDistance` by thumb; arcs in frame, 60 FPS.
-- **[You] deferred — `GRAVITY` name (2026-10-20).** It is literal acceleration in `Physics`,
-  but the Spawner's closed-form aim (`vy=√(2g·Δy)`, `tFlight=2vy/g`) cancels it out of the
-  apex — so it tunes arc **tempo**, not height (`apexRange` is the height knob). Options:
-  keep + doc · `ARC_GRAVITY` · `ARC_TEMPO` · reshape for real-gravity feel. Config comment
-  is stale. **No change made.**
-- **Next step:** step 6 (game rules) — write `docs/PLAN-STEP-6-rules.md` at session
-  start (same pattern as steps 3–5). 30 s round timer (`progress` un-stubbed),
-  score display (the `Score` model exists), game-over screen + restart; missed
-  fruit explicitly has no consequence in MVP.
+- **[You] Step 6 by eye/on device:** HUD look (sizes/colours), card copy, 30 s
+  length + ramp feel — tune `ROUND.duration` and theme RampRanges; on-device
+  portrait, 60 FPS, both backends.
+- **[You] Step 2/3/4/5 tuning (carry-over):** `CUT` knob feel, `SWIPE.gateDistance`
+  by thumb, lighting/palette, `PLAYFIELD` numbers, arcs by eye; deferred `GRAVITY`
+  naming (2026-10-20, options listed in CHANGELOG).
+- **Next step:** step 7 (content/theme abstraction) — write
+  `docs/PLAN-STEP-7-content.md` at session start: real models behind the
+  `ObjectModel`/`pieces?` seams, a second theme proving the data-only swap
+  (PLAN §7/§10 `setTheme`), gameplay stays theme-ignorant (Decision 3D).
 
 ## Locked decisions
 
@@ -74,6 +52,7 @@ segment)` scans `pool.each`, first hit wins, score → pieces → release order;
 **Step 3:** A no interpolation (latest-state copy) · B depth band ±1 (step 5 collision = 3D sphere-vs-segment) _(band pinned to z=0 2026-10-21 — chopping bug; collision stays 3D)_ · C plain meshes, not `InstancedMesh` (step 8) · D `main.ts` injects theme data; gameplay never imports the theme file · E ramps with round progress _(overridden 2026-10-18)_ · F injectable `rand`.
 **Step 4:** A buffer home = `game/Swipes.ts` (gameplay, DOM-free; `Input` stays a dumb adapter) · B gate = per-stroke world travel ≥ `SWIPE.gateDistance`, opens once, holds to stroke end · C drain at top of `fixedUpdate` (step 5 tests pre-move positions) · D `visibilitychange` clear lives in `main.ts`.
 **Step 5:** A pieces = separate debris ring, never the object pool (re-slice/score impossible by construction) · B piece geometry = `def.pieces?` authored at final size, else scaled clone (`pieceScale`) · C score rides on `SpawnedObject.score` (launch-set, reset-zeroed) · D hit test = pure scalar 3D sphere-vs-segment + `CUT.pad` · E cut runs inside the drain (pre-move); score + pieces fire BEFORE release.
+**Step 6:** A round clock = `game/Round.ts` (scalar state, `over` latch) · B `round.step` runs last in `fixedUpdate`; `over` → freeze mid-air · C `round.progress` feeds the spawn ramp (3E un-parked) · D HUD = `ui/hud.ts` on the step-1 root, DOM writes only on integer change · E restart re-arms every mutable system (score/round/spawner/pool/debris/swipes) · F missed fruit: no consequence (PLAN §6).
 
 ## Commands
 
@@ -85,11 +64,12 @@ pnpm verify:playfield    # bun scripts/verify-playfield.ts — fit/bounds/projec
 pnpm verify:launch       # bun scripts/verify-launch.ts — aim/integration/despawn/spawner
 pnpm verify:swipe        # bun scripts/verify-swipe.ts — buffer/gate/Input (44 checks)
 pnpm verify:cut          # bun scripts/verify-cut.ts — hit test/slicer/score/debris (68 checks)
+pnpm verify:rules       # bun scripts/verify-rules.ts — round/reset/ramp (32 checks)
 pnpm lint                # oxlint
 pnpm fmt                 # oxfmt (write); use --check to verify
 ```
 
-Always finish a task with: `npx tsc --noEmit` → `npx oxlint` → `pnpm verify:foundation` → `pnpm verify:launch` → `pnpm verify:swipe` → `pnpm verify:cut` → `npx vite build`.
+Always finish a task with: `npx tsc --noEmit` → `npx oxlint` → `pnpm verify:foundation` → `pnpm verify:launch` → `pnpm verify:swipe` → `pnpm verify:cut` → `pnpm verify:rules` → `npx vite build`.
 
 ## Conventions / gotchas
 
