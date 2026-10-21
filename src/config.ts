@@ -66,6 +66,16 @@ export const SWIPE = {
     gateDistance: 0.5,
 } as const;
 
+// ===== CUT =====
+// Cutting (step 5A). The hit test widens each object's bounding sphere by
+// `pad` — forgiveness on the swipe path, since a zero-thickness segment
+// against a bounding sphere is stricter than a moving finger ever feels.
+// Piece knobs (pieceScale/inherit/separation/spin/life) arrive in 5B.
+export const CUT = {
+    /** World units added to an object's bounding radius for hit tests. */
+    pad: 0.1,
+} as const;
+
 // ===== PLAYFIELD =====
 // The swipe ray is cast onto this depth plane, so a slice happens where the
 // fruit is rather than wherever the camera happens to look.
@@ -142,3 +152,7 @@ export const DEBUG_SPAWN = import.meta.env.DEV;
 // Dev-only: log each swipe segment as the fixed step consumes it — the exact
 // input step 5's collision will see.
 export const DEBUG_SWIPE = import.meta.env.DEV;
+
+// Dev-only: log each cut the Slicer makes (defId + score delta) — the
+// feedback loop step 6's score display will visualize.
+export const DEBUG_CUT = import.meta.env.DEV;

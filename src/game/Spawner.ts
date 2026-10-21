@@ -226,6 +226,7 @@ export class Spawner {
         object.defId = def.id;
         object.category = def.category;
         object.radius = radius;
+        object.score = def.score;
         // Mirrors checkout; the view layer keys mesh visibility off it.
         object.active = true;
     }

@@ -9,6 +9,7 @@ import type { ToneMapping } from 'three/webgpu';
 import { registerSW } from 'virtual:pwa-register';
 import './style.css';
 import {
+    DEBUG_CUT,
     DEBUG_PLAYFIELD,
     DEBUG_SWIPE,
     MAX_PIXEL_RATIO,
@@ -26,6 +27,8 @@ import { Physics } from './game/Physics';
 import { Spawner } from './game/Spawner';
 import { Pool } from './game/Pool';
 import { Swipes } from './game/Swipes';
+import { Slicer } from './game/Slicer';
+import { Score } from './game/Score';
 import { createSpawnedObject, resetSpawnedObject } from './game/SpawnedObject';
 import {
     createCamera,
@@ -125,12 +128,19 @@ async function boot(): Promise<void> {
 
     // Steps 4A–B: input emits on pointer events (outside the sim); segments
     // are captured here — gated per stroke (SWIPE.gateDistance) — and drained
-    // at the top of each fixed step, so step 5's collision can test them
-    // deterministically against pre-move pool state.
+    // at the top of each fixed step, where step 5's Slicer cuts against
+    // pre-move pool state.
     const swipes = new Swipes(SWIPE.gateDistance);
     input.onSwipe((segment) => swipes.push(segment));
     input.onStrokeStart(() => swipes.beginStroke());
     input.onStrokeEnd(() => swipes.endStroke());
+
+    // Step 5A: drained segments become cuts. Score model now; the piece sink
+    // is absent until 5B's debris ring replaces it. Cuts run inside the drain
+    // — before spawner/physics move anything — so the hit test and the
+    // pieces' inherited velocity both see pre-move state (Decision 4C).
+    const score = new Score();
+    const slicer = new Slicer({ score, onCut: DEBUG_CUT ? logCut : undefined });
 
     // Discarded with the loop's backlog on a hidden tab, so a stale stroke
     // never hits the resumed sim. The listener lives here rather than in
@@ -139,12 +149,21 @@ async function boot(): Promise<void> {
         if (document.hidden) swipes.clear();
     });
 
-    // Consumed from fixedUpdate below; a function declaration so the sim path
+    // Consumed from fixedUpdate below; function declarations so the sim path
     // never allocates a closure per step.
     function logSwipe(segment: SwipeSegment): void {
         console.info(
             `step swipe ${segment.from.x.toFixed(2)},${segment.from.y.toFixed(2)} -> ${segment.to.x.toFixed(2)},${segment.to.y.toFixed(2)}`,
         );
+    }
+
+    function logCut(defId: string, points: number): void {
+        console.info(`cut ${defId} ${points >= 0 ? '+' : ''}${points}`);
+    }
+
+    function cutSwipe(segment: SwipeSegment): void {
+        if (DEBUG_SWIPE) logSwipe(segment);
+        slicer.cut(objects, segment);
     }
 
     // Dev-only overlay. Vite drops the whole block from the production build,
@@ -156,11 +175,11 @@ async function boot(): Promise<void> {
 
     const loop = new GameLoop({
         fixedUpdate: (dt) => {
-            // Step 4A: drain first, before spawner/physics move anything —
-            // step 5 tests segments against pre-move positions. Once per
-            // fixed step, not per render: a frame with 0 sub-steps leaves
-            // the segments for the next step to consume.
-            swipes.drain(DEBUG_SWIPE ? logSwipe : undefined);
+            // Step 5A: drain first, before spawner/physics move anything —
+            // segments are cut against pre-move positions. Once per fixed
+            // step, not per render: a frame with 0 sub-steps leaves the
+            // segments for the next step to consume.
+            swipes.drain(cutSwipe);
             // Round progress (0..1) is step 6's to own; 0 holds the spawn
             // ramp at its easy end until the round timer lands. Spawner
             // reads it to pick interval/batch from their RampRanges.

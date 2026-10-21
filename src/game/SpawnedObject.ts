@@ -14,8 +14,10 @@ export interface SpawnedObject {
     /** Content id from `GameObjectDefinition`; gameplay's handle on "what". */
     defId: string;
     category: ObjectCategory;
-    /** Bounding-sphere radius: despawn margins now, step 5 collision later. */
+    /** Bounding-sphere radius: despawn margins + step 5 collision. */
     radius: number;
+    /** Points awarded when cut: `def.score` copied at launch (+ target, − restricted). */
+    score: number;
     /**
      * Mirrors pool checkout. The pool's slot state governs iteration; this
      * flag exists for view layers (key `visible` off it) and debugging. The
@@ -34,6 +36,7 @@ export function createSpawnedObject(): SpawnedObject {
         defId: '',
         category: 'target',
         radius: 0,
+        score: 0,
         active: false,
     };
 }
@@ -51,6 +54,7 @@ export function resetSpawnedObject(object: SpawnedObject): void {
     object.defId = '';
     object.category = 'target';
     object.radius = 0;
+    object.score = 0;
     object.active = false;
 }
 
