@@ -1,14 +1,20 @@
-import { BoxGeometry, Mesh, MeshStandardMaterial, SphereGeometry } from 'three/webgpu';
-import type { BufferGeometry, Scene } from 'three/webgpu';
+import { Mesh } from 'three/webgpu';
+import type { BufferGeometry, MeshStandardMaterial, Scene } from 'three/webgpu';
+import { OBJECT_MATERIAL } from '../config';
 import type { GameObjectDefinition, ObjectCategory, ThemeAccents } from '../content/types';
 import type { SpawnedObject } from '../game/SpawnedObject';
+import { createObjectMaterial } from './Materials';
+import { bakeModel } from './Model';
 
 /**
- * View layer for pooled objects (step 3B): one mesh per pool slot,
- * geometry shared per model, one material per category for the whole game.
+ * View layer for pooled objects (step 3B, art upgraded in step 7): one mesh per
+ * pool slot, geometry baked once per def, one material per category for the
+ * whole game.
  *
- * Reads theme ACCENTS — rendering-side only. Gameplay never sees a colour
- * (step 3 decision D); it only ever sets `category` on a SpawnedObject.
+ * Reads theme ACCENTS — rendering-side only. Base colour comes from each
+ * model's vertex colours; the accent becomes the category emissive tint, so
+ * target vs restricted still reads. Gameplay never sees a colour (step 3
+ * decision D); it only ever sets `category` on a SpawnedObject.
  *
  * Allocation rule: everything here is built once. `syncViews` per frame only
  * writes references and copies transforms.
@@ -16,34 +22,17 @@ import type { SpawnedObject } from '../game/SpawnedObject';
 export interface ObjectViews {
     /** Index-aligned with the pool's construction-order slots. */
     readonly meshes: readonly Mesh[];
-    /** defId → shared geometry, resolved once at creation. */
+    /** defId → baked geometry, resolved once at creation. */
     readonly geometries: Map<string, BufferGeometry>;
     /** One shared material per category, tinted from theme accents. */
     readonly materials: Record<ObjectCategory, MeshStandardMaterial>;
-}
-
-export function createGeometry(model: GameObjectDefinition['model']): BufferGeometry {
-    if (model.kind === 'geometry') {
-        // Theme-owned geometry; shared, never disposed by the view layer.
-        return model.geometry;
-    }
-
-    switch (model.geometry) {
-        case 'box':
-            return new BoxGeometry(model.size, model.size, model.size);
-        case 'sphere':
-            // Low segment counts on purpose (docs/PERF-BUDGET.md: low-poly).
-            return new SphereGeometry(model.size / 2, 16, 12);
-        default:
-            throw new Error('unknown primitive geometry');
-    }
 }
 
 /**
  * Builds the per-slot meshes and adds them to `scene`, all invisible until
  * their object is checked out and `syncViews` runs.
  *
- * `count` is the pool size; models come from the theme.
+ * `count` is the pool size; models come from the theme and are baked here.
  */
 export function createObjectViews(
     scene: Scene,
@@ -54,13 +43,13 @@ export function createObjectViews(
     const geometries = new Map<string, BufferGeometry>();
     for (const model of models) {
         if (!geometries.has(model.id)) {
-            geometries.set(model.id, createGeometry(model.model));
+            geometries.set(model.id, bakeModel(model.model));
         }
     }
 
     const materials: Record<ObjectCategory, MeshStandardMaterial> = {
-        target: new MeshStandardMaterial({ color: accents.target }),
-        restricted: new MeshStandardMaterial({ color: accents.restricted }),
+        target: createObjectMaterial(accents.target, OBJECT_MATERIAL.targetEmissive),
+        restricted: createObjectMaterial(accents.restricted, OBJECT_MATERIAL.restrictedEmissive),
     };
 
     const meshes: Mesh[] = [];

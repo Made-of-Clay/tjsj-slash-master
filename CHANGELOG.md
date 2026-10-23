@@ -2,6 +2,32 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-22
+
+### Step 7 — model seam + bake (A)
+
+- Plan: `docs/PLAN-STEP-7-content.md` (decisions A–L locked 2026-10-22).
+- `content/types.ts`: `ObjectModel` → `{ kind:'parts', parts: ModelPart[], size }`
+  | `{ kind:'asset', url, size }` (step-9 loader seam, bake throws). `ModelPart`
+  = geometry + sRGB `color` + optional local transform. `primitive`/`geometry`
+  variants deleted.
+- `rendering/Model.ts`: `bakeModel` — clone parts (never mutate templates),
+  strip uv/uv1/tangent, normalise indexing, bake transform, linear vertex
+  colours, `mergeGeometries` → one geometry per def. Boot-only, GPU-free.
+- `rendering/Materials.ts`: `createObjectMaterial` — one shared material per
+  category, `vertexColors`, theme accent as emissive (restricted stronger).
+  `OBJECT_MATERIAL` config (roughness/metalness/emissive).
+- `ObjectViews`/`DebrisViews` consume baked geometry; authored pieces bake at
+  final size, default pieces clone the baked parent × `pieceScale`.
+- `content/models/halloween.ts`: 7A two-part stand-ins (pumpkin body+stem,
+  skull cranium+jaw), marked for 7B replacement. Bounding radius unchanged
+  (`size` 1.0 → 0.87 ≤ `sideMargin`).
+- Harness fake defs migrated to parts models (`verify-cut`, `verify-rules`).
+- Payload: vendor +1.6 kB gzip (`BufferGeometryUtils.mergeGeometries`); no
+  draco/basis/ktx2 in `dist/assets`. Precache 1040.90 KiB.
+- Full chain green (foundation/playfield/launch/swipe/cut/rules + build).
+- Pending 7A eyeball: model proportions/colours, emissive balance.
+
 ## 2026-10-21
 
 ### Step 6 — harness + close-out (C–D)

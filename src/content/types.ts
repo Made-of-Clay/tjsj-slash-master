@@ -2,32 +2,36 @@ import type { BufferGeometry } from 'three/webgpu';
 
 export type ObjectCategory = 'target' | 'restricted';
 
-/**
- * How an object is drawn. A union so step 3's primitives and step 9's real
- * geometry share one field on GameObjectDefinition.
- *
- * `size` is the world-space extent: cube edge length, sphere diameter. It
- * sizes the view geometry and derives the bounding radius at launch.
- */
-export type ObjectModel =
-    | { kind: 'primitive'; geometry: 'box' | 'sphere'; size: number }
-    | { kind: 'geometry'; geometry: BufferGeometry; size: number };
+/** One model piece in local space; baked into the def's single geometry at boot. */
+export interface ModelPart {
+    geometry: BufferGeometry;
+    /** sRGB hex, e.g. `#e8722c`. */
+    color: string;
+    position?: readonly [number, number, number];
+    /** Euler XYZ, radians. */
+    rotation?: readonly [number, number, number];
+    /** Keep positive: negative scale flips winding. */
+    scale?: readonly [number, number, number];
+}
 
 /**
- * Content-side description of an object. Gameplay reads id/score/category and
- * never inspects `model`, so swapping the art cannot change the rules.
+ * How an object is drawn. Gameplay reads only `size`.
+ * `size` = max extent; model centered on origin and fits a `size` box.
+ * `asset` = step-9 loader seam (baking throws until the async loader lands).
  */
+export type ObjectModel =
+    | { kind: 'parts'; parts: readonly ModelPart[]; size: number }
+    | { kind: 'asset'; url: string; size: number };
+
+/** Content-side object description; gameplay never reads `model`. */
 export interface GameObjectDefinition {
     id: string;
     score: number;
     category: ObjectCategory;
     model: ObjectModel;
     /**
-     * Optional authored piece models for slicing (step 5 seam, Decision B).
-     * Each entry is one piece at final size — `CUT.pieceScale` applies only
-     * to the default (absent → two scaled clones of `model`). Debris spawns
-     * two pieces: extras are ignored, a missing entry falls back to the
-     * scaled clone.
+     * Authored slice pieces at final size; absent entries fall back to a
+     * `CUT.pieceScale` clone. Extras are ignored (two pieces per cut).
      */
     pieces?: readonly ObjectModel[];
 }
@@ -35,15 +39,7 @@ export interface GameObjectDefinition {
 /** `[min, max]` pair, sampled uniformly. */
 export type SpawnRange = readonly [number, number];
 
-/**
- * A range that ramps with round progress: `early` at progress 0, `late` at
- * progress 1, interpolated between.
- *
- * Course correction (2026-10-18, [You], step 3C): PLAN.md's "constant spawn
- * interval, no ramp" is overridden — spawn cadence and batch size now grow
- * across the round. Progress is threaded in by workstream D and stubbed until
- * step 6 owns the round timer.
- */
+/** Range that ramps with round progress: `early` at 0, `late` at 1. */
 export interface RampRange {
     early: SpawnRange;
     late: SpawnRange;
@@ -59,10 +55,7 @@ export interface SpawnRules {
     speedRange: SpawnRange;
     /** Apex height as a fraction of full field height above the launch line. */
     apexRange: SpawnRange;
-    /**
-     * z band around the play plane. Keep it [0, 0] while the blade is a z=0
-     * segment — z offsets shrink reach and parallax-shift objects.
-     */
+    /** z band; keep [0, 0] — z offsets shrink blade reach and parallax-shift objects. */
     depthRange: SpawnRange;
     /** Angular velocity per axis, rad/s. */
     spinRange: SpawnRange;
@@ -70,11 +63,7 @@ export interface SpawnRules {
     sideLaunchChance: number;
 }
 
-/**
- * Scene-look palette: the vertical background gradient. Consumed by
- * `rendering/Materials.ts`'s `createBackgroundNode` (via `screenUV`), never by
- * gameplay.
- */
+/** Vertical background gradient (via `screenUV`), consumed by rendering only. */
 export interface ThemeGradient {
     /** Colour at the top of the screen. */
     top: string;
@@ -86,9 +75,7 @@ export interface ThemeGradient {
     vignetteStrength: number;
 }
 
-/**
- * Theme lighting tints. Intensities remain code-side (tuned in workstream D).
- */
+/** Light colour tints; intensities live in `config.ts`. */
 export interface ThemeLighting {
     ambient: string;
     key: string;
@@ -96,24 +83,17 @@ export interface ThemeLighting {
     rim: string;
 }
 
-/** Object accent colours, read by object materials in step 3. Gameplay ignores them. */
+/** Category emissive tints; base colour comes from model vertex colours. */
 export interface ThemeAccents {
     target: string;
     restricted: string;
 }
 
-/**
- * A named set of objects and spawn rules. Theme data arrives in step 7; only
- * the shape is settled here, so nothing in the codebase depends on a theme
- * file existing yet.
- */
+/** A named set of objects, palette and spawn rules. */
 export interface Theme {
     id: string;
-    /** Vertical gradient background (via `screenUV`). */
     background: ThemeGradient;
-    /** Light colour tints. Intensities tuned in workstream D. */
     lighting: ThemeLighting;
-    /** Object accent colours. */
     accents: ThemeAccents;
     objects: GameObjectDefinition[];
     spawnRules: SpawnRules;

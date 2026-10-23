@@ -4,7 +4,7 @@ import type { MeshStandardMaterial } from 'three/webgpu';
 import { CUT } from '../config';
 import type { GameObjectDefinition, ObjectCategory } from '../content/types';
 import type { DebrisPiece } from '../game/Debris';
-import { createGeometry } from './ObjectViews';
+import { bakeModel } from './Model';
 
 /**
  * View layer for sliced pieces (step 5B): one mesh per Debris ring slot,
@@ -30,7 +30,7 @@ export interface DebrisViews {
  *
  * `count` is the debris capacity; models come from the theme. Authored
  * `def.pieces` entries are used at final size (Decision B); the default is a
- * clone of the parent geometry with `CUT.pieceScale` baked in.
+ * clone of the baked parent geometry with `CUT.pieceScale` baked in.
  */
 export function createDebrisViews(
     scene: Scene,
@@ -38,13 +38,13 @@ export function createDebrisViews(
     models: readonly GameObjectDefinition[],
     materials: Record<ObjectCategory, MeshStandardMaterial>,
 ): DebrisViews {
-    const clones = new Map<string, BufferGeometry>();
+    const scaledClones = new Map<string, BufferGeometry>();
     const scaledClone = (def: GameObjectDefinition): BufferGeometry => {
-        let geometry = clones.get(def.id);
+        let geometry = scaledClones.get(def.id);
         if (!geometry) {
-            geometry = createGeometry(def.model);
+            geometry = bakeModel(def.model);
             geometry.scale(CUT.pieceScale, CUT.pieceScale, CUT.pieceScale);
-            clones.set(def.id, geometry);
+            scaledClones.set(def.id, geometry);
         }
         return geometry;
     };
@@ -54,7 +54,7 @@ export function createDebrisViews(
         const pair: BufferGeometry[] = [];
         for (let index = 0; index < 2; index += 1) {
             const authored = def.pieces?.[index];
-            pair.push(authored ? createGeometry(authored) : scaledClone(def));
+            pair.push(authored ? bakeModel(authored) : scaledClone(def));
         }
         geometries.set(def.id, pair);
     }

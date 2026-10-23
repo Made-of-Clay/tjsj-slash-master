@@ -24,6 +24,7 @@ function check(name: string, condition: boolean, detail = ''): void {
     }
 }
 
+import { BoxGeometry } from 'three/webgpu';
 import { ROUND } from '../src/config.ts';
 import type { SpawnRules } from '../src/content/types.ts';
 import type { PlayBounds } from '../src/rendering/Camera.ts';
@@ -168,14 +169,18 @@ console.log('Spawner reset');
     check('reset is safe to repeat', skipping.skipped === 0);
 }
 
-/** One target def, box size 1 — enough for every spawn draw. */
+/** One target def, parts box size 1 — enough for every spawn draw (step 7 seam). */
 function defs() {
     return [
         {
             id: 'a',
             score: 1,
             category: 'target' as const,
-            model: { kind: 'primitive' as const, geometry: 'box' as const, size: 1 },
+            model: {
+                kind: 'parts' as const,
+                parts: [{ geometry: new BoxGeometry(1, 1, 1), color: '#ffffff' }],
+                size: 1,
+            },
         },
     ];
 }

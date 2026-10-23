@@ -1,5 +1,7 @@
+import { MeshStandardMaterial } from 'three/webgpu';
 import type { Node } from 'three/webgpu';
 import { color, mix, screenUV, smoothstep, vec2 } from 'three/tsl';
+import { OBJECT_MATERIAL } from '../config';
 import type { ThemeGradient } from '../content/types';
 
 /**
@@ -25,4 +27,26 @@ export function createBackgroundNode(palette: ThemeGradient): Node {
     const vignette = smoothstep(0.25, 0.75, fromCentre).mul(palette.vignetteStrength);
 
     return mix(gradient, color(palette.vignette), vignette);
+}
+
+/**
+ * Shared object material (step 7): one per category for the whole game.
+ *
+ * Base colour comes from the baked model's vertex colours, so every def has
+ * its own look without a material per def. The theme accent is the emissive
+ * tint — subtle on targets, stronger on restricted objects, which is how the
+ * category still reads at a glance.
+ */
+export function createObjectMaterial(
+    accent: string,
+    emissiveIntensity: number,
+): MeshStandardMaterial {
+    return new MeshStandardMaterial({
+        vertexColors: true,
+        color: '#ffffff',
+        emissive: accent,
+        emissiveIntensity,
+        roughness: OBJECT_MATERIAL.roughness,
+        metalness: OBJECT_MATERIAL.metalness,
+    });
 }

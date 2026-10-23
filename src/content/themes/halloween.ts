@@ -1,3 +1,4 @@
+import { createPumpkinModel, createSkullModel } from '../models/halloween';
 import type { Theme } from '../types';
 
 /**
@@ -24,20 +25,21 @@ export const halloween: Theme = {
         target: '#ff7a45',
         restricted: '#22c1c3',
     },
-    // Step 3C: box stand-ins. Size 1.0 → bounding radius 0.87, which
-    // PLAYFIELD.sideMargin (1.0) covers, so edge spawns never clip.
+    // Step 7: procedural parts models. Size 1.0 → bounding radius 0.87, which
+    // PLAYFIELD.sideMargin (1.0) covers, so edge spawns never clip. 7A ships
+    // two-part seam stand-ins; 7B replaces the builders with the full recipes.
     objects: [
         {
             id: 'pumpkin',
             score: 1,
             category: 'target',
-            model: { kind: 'primitive', geometry: 'box', size: 1 },
+            model: createPumpkinModel(),
         },
         {
             id: 'skull',
             score: -1,
             category: 'restricted',
-            model: { kind: 'primitive', geometry: 'box', size: 1 },
+            model: createSkullModel(),
         },
     ],
     spawnRules: {

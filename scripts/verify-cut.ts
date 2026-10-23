@@ -27,7 +27,7 @@ function check(name: string, condition: boolean, detail = ''): void {
     }
 }
 
-import { Vector3 } from 'three/webgpu';
+import { BoxGeometry, Vector3 } from 'three/webgpu';
 import { CUT, SPAWN } from '../src/config.ts';
 import type { ObjectCategory, SpawnRules } from '../src/content/types.ts';
 import { halloween } from '../src/content/themes/halloween.ts';
@@ -353,6 +353,13 @@ console.log('Config + spawn');
     resetSpawnedObject(fresh);
     check('reset zeroes the score', fresh.score === 0);
 
+    // Step 7: the model seam is parts-only now; only `size` matters here.
+    const seamBoxModel = () => ({
+        kind: 'parts' as const,
+        parts: [{ geometry: new BoxGeometry(1, 1, 1), color: '#ffffff' }],
+        size: 1,
+    });
+
     // The Spawner copies def.score onto the launch (rand = () => 0 pins the
     // def pick to defs[0]; speed 1 keeps the aim math NaN-free).
     const defs = [
@@ -360,13 +367,13 @@ console.log('Config + spawn');
             id: 'a',
             score: 3,
             category: 'target' as const,
-            model: { kind: 'primitive' as const, geometry: 'box' as const, size: 1 },
+            model: seamBoxModel(),
         },
         {
             id: 'b',
             score: -2,
             category: 'restricted' as const,
-            model: { kind: 'primitive' as const, geometry: 'box' as const, size: 1 },
+            model: seamBoxModel(),
         },
     ];
     const rules: SpawnRules = {

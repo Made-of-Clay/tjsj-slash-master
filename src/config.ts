@@ -97,6 +97,19 @@ export const CUT = {
     capacity: 64,
 } as const;
 
+// ===== OBJECTS =====
+// Step 7: one shared material per category. Base colour is the baked model's
+// vertex colours; these are the code-side knobs. Emissive is the category
+// accent tint (theme `accents`), stronger on restricted objects so danger
+// still reads when the art is its own colours.
+export const OBJECT_MATERIAL = {
+    roughness: 0.55,
+    metalness: 0.05,
+    /** Category accent emissive: target subtle, restricted flagged. */
+    targetEmissive: 0.06,
+    restrictedEmissive: 0.25,
+} as const;
+
 // ===== PLAYFIELD =====
 // The swipe ray is cast onto this depth plane, so a slice happens where the
 // fruit is rather than wherever the camera happens to look.
@@ -116,8 +129,9 @@ export const PLAYFIELD = {
     /**
      * World-space guard kept free at each side edge, so an object centred inside
      * the bounds is never partially cut off. Must cover the largest object
-     * radius: theme objects are edge-1.0 boxes (radius 0.87) as of step 3C, so
-     * this is 1.0. Raise it in lockstep with any theme that grows its objects.
+     * radius: step 7 models top out around size 1.1 (radius 0.95), so this is
+     * 1.0. `verify-content` asserts every theme fits; raise it deliberately
+     * with any theme that grows its objects.
      */
     sideMargin: 1.0,
 } as const;
