@@ -74,6 +74,10 @@ Always finish a task with: `npx tsc --noEmit` → `npx oxlint` → `pnpm verify:
 ## Conventions / gotchas
 
 - Keep replies ULTRA-TERSE. Ownership tags: **[I]** agent, **[You]** human, **[Pair]** scaffold-then-decide.
+- **Code comments:** aim for 0 (self-documenting names/structure). 1–2 lines when
+  a why, invariant, or non-obvious contract must be stated; 4+ only for real
+  gotchas. Never narrate what the code visibly does. Update stale comments with
+  the code — a wrong comment is worse than none.
 - `scene.backgroundNode` exists at runtime (three 0.185) but is missing from
   `@types/three`'s `Scene` → cast to `Scene & { backgroundNode: Node | null }`.
 - `Node` type: `import type { Node } from 'three/webgpu'`. TSL imports from `'three/tsl'`.
