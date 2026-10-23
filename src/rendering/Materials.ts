@@ -4,12 +4,7 @@ import { color, mix, screenUV, smoothstep, vec2 } from 'three/tsl';
 import { OBJECT_MATERIAL } from '../config';
 import type { ThemeGradient } from '../content/types';
 
-/**
- * Shared node materials.
- *
- * TSL runs through `colorNode` rather than the classic `color` property — that
- * difference is the whole reason for adopting WebGPURenderer in this step.
- */
+/** TSL materials use `colorNode`, not the classic `color` property. */
 
 /**
  * Full-screen TSL background: a vertical gradient with a radial vignette.
@@ -29,14 +24,7 @@ export function createBackgroundNode(palette: ThemeGradient): Node {
     return mix(gradient, color(palette.vignette), vignette);
 }
 
-/**
- * Shared object material (step 7): one per category for the whole game.
- *
- * Base colour comes from the baked model's vertex colours, so every def has
- * its own look without a material per def. The theme accent is the emissive
- * tint — subtle on targets, stronger on restricted objects, which is how the
- * category still reads at a glance.
- */
+/** Shared per-category material: vertex-colour base, accent as emissive. */
 export function createObjectMaterial(
     accent: string,
     emissiveIntensity: number,

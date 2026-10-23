@@ -2,15 +2,8 @@ import { CylinderGeometry, SphereGeometry } from 'three/webgpu';
 import type { ObjectModel } from '../types';
 
 /**
- * Halloween art (step 7).
- *
- * Step 7A seam stand-ins: two-part, two-colour models so the bake + vertex
- * colours + category-emissive path is exercised end to end. Step 7B replaces
- * these with the full recipes (candy, ghost, skull sockets, authored pumpkin
- * halves) without touching anything outside this file.
- *
- * Contract: parts are centered on the origin and fit inside a `size`-ed box;
- * models are low-poly (see docs/PERF-BUDGET.md).
+ * Parts centered on origin, fit a `size` box, low-poly.
+ * 7A stand-ins; 7B adds the full recipes + authored pumpkin halves.
  */
 
 export function createPumpkinModel(): ObjectModel {

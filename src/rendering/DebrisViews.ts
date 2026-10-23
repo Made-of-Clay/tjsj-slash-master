@@ -24,14 +24,7 @@ export interface DebrisViews {
     readonly materials: Record<ObjectCategory, MeshStandardMaterial>;
 }
 
-/**
- * Builds the piece meshes and adds them to `scene`, all invisible until
- * their piece is spawned and `syncDebrisViews` runs.
- *
- * `count` is the debris capacity; models come from the theme. Authored
- * `def.pieces` entries are used at final size (Decision B); the default is a
- * clone of the baked parent geometry with `CUT.pieceScale` baked in.
- */
+/** Authored pieces bake at final size; defaults clone the parent × `pieceScale`. */
 export function createDebrisViews(
     scene: Scene,
     count: number,

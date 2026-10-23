@@ -4,35 +4,17 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { ModelPart, ObjectModel } from '../content/types';
 
 /**
- * Content model → one GPU-ready geometry (step 7).
- *
- * The pooled view layer keeps exactly one mesh per slot, so a model's parts are
- * baked into a single geometry at boot: local transforms applied to copies,
- * per-part colours written as a vertex-colour attribute, then merged. No
- * per-frame cost, no extra draw calls, no scene-graph nesting.
- *
- * Runs without a rendering context (plain geometry math), so `verify-content`
- * can exercise it under bun.
- *
- * Step-9 loader seam: `{ kind: 'asset' }` is typed but not baked. The async
- * path is a preload before view creation — `main.boot` already awaits
- * `renderer.init()`, so it can equally await `GLTFLoader.loadAsync(url)` and
- * convert the loaded meshes into `ModelPart`s (or a resolved geometry map)
- * before `createObjectViews`.
+ * Bakes a content model into one geometry per def — one mesh per pool slot,
+ * zero per-frame cost. GPU-free, so `verify-content` runs it under bun.
  */
 
-/** Attributes a bake does not need: no textures in step 7, no tangents. */
+/** No textures or tangents in step 7. */
 const STRIPPED = ['uv', 'uv1', 'tangent'] as const;
 
 const ZERO: readonly [number, number, number] = [0, 0, 0];
 const ONE: readonly [number, number, number] = [1, 1, 1];
 
-/**
- * Bakes `model` into a single indexed-or-non-indexed geometry with
- * `position` / `normal` / `color`. Throws on an empty parts list, an asset
- * model (step-9 seam), or a merge failure (incompatible part attributes — a
- * content bug, not a runtime condition).
- */
+/** Throws on empty parts, an asset model, or incompatible part attributes. */
 export function bakeModel(model: ObjectModel): BufferGeometry {
     if (model.kind === 'asset') {
         throw new Error(
@@ -45,8 +27,7 @@ export function bakeModel(model: ObjectModel): BufferGeometry {
 
     const baked = model.parts.map(bakePart);
 
-    // mergeGeometries requires all inputs indexed or all non-indexed. Standard
-    // three primitives are indexed, so this only fires for a custom part.
+    // mergeGeometries requires all parts indexed or all non-indexed.
     const indexed = baked.filter((geometry) => geometry.index !== null).length;
     if (indexed !== 0 && indexed !== baked.length) {
         for (let index = 0; index < baked.length; index += 1) {
@@ -74,8 +55,7 @@ export function bakeModel(model: ObjectModel): BufferGeometry {
 
 /** Clones one part, bakes its transform, and writes its vertex colours. */
 function bakePart(part: ModelPart): BufferGeometry {
-    // Clone first: content-owned geometry is a shared template and must never
-    // be transformed by a bake.
+    // Never transform the content-owned template.
     const geometry = part.geometry.clone();
     for (const attribute of STRIPPED) {
         geometry.deleteAttribute(attribute);
@@ -100,11 +80,7 @@ function bakePart(part: ModelPart): BufferGeometry {
     return geometry;
 }
 
-/**
- * Expands one part colour across the geometry's vertices. `Color.setStyle`
- * converts the sRGB hex into the renderer's working (linear) space, which is
- * what a vertex-colour attribute is expected to hold.
- */
+/** Vertex colours must be linear; `setStyle` converts from sRGB. */
 function writeVertexColors(geometry: BufferGeometry, style: string): void {
     const color = new Color().setStyle(style);
     const count = geometry.getAttribute('position').count;

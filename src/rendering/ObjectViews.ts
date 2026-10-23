@@ -7,17 +7,8 @@ import { createObjectMaterial } from './Materials';
 import { bakeModel } from './Model';
 
 /**
- * View layer for pooled objects (step 3B, art upgraded in step 7): one mesh per
- * pool slot, geometry baked once per def, one material per category for the
- * whole game.
- *
- * Reads theme ACCENTS — rendering-side only. Base colour comes from each
- * model's vertex colours; the accent becomes the category emissive tint, so
- * target vs restricted still reads. Gameplay never sees a colour (step 3
- * decision D); it only ever sets `category` on a SpawnedObject.
- *
- * Allocation rule: everything here is built once. `syncViews` per frame only
- * writes references and copies transforms.
+ * One mesh per pool slot, geometry baked once per def, one material per
+ * category. Built once; `syncViews` only writes references and transforms.
  */
 export interface ObjectViews {
     /** Index-aligned with the pool's construction-order slots. */
@@ -28,12 +19,7 @@ export interface ObjectViews {
     readonly materials: Record<ObjectCategory, MeshStandardMaterial>;
 }
 
-/**
- * Builds the per-slot meshes and adds them to `scene`, all invisible until
- * their object is checked out and `syncViews` runs.
- *
- * `count` is the pool size; models come from the theme and are baked here.
- */
+/** Builds invisible per-slot meshes; models are baked here. */
 export function createObjectViews(
     scene: Scene,
     count: number,
@@ -65,16 +51,7 @@ export function createObjectViews(
     return { meshes, geometries, materials };
 }
 
-/**
- * Copies live sim state onto the slot meshes. Called from `render`, never
- * `fixedUpdate` — views are presentation, not simulation (plan decision A:
- * latest-state copy, no interpolation until step 9).
- *
- * Hidden slots get no transform writes: the next activation overwrites
- * position and rotation anyway, so skipping them is safe and branch-cheap.
- * An active object whose `defId` has no registered model is hidden rather
- * than drawn with a stale shape.
- */
+/** Copies live state to slot meshes; presentation only, no interpolation. */
 export function syncViews(views: ObjectViews, objects: readonly SpawnedObject[]): void {
     const { meshes, geometries, materials } = views;
 
