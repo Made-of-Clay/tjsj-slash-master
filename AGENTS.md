@@ -11,40 +11,49 @@ Built in numbered steps 1–10 (`PLAN.md`); each step has a detailed plan in `do
 **Stack:** Three.js `0.185.1` (`WebGPURenderer` + TSL), TypeScript, Vite, pnpm, Oxlint + Oxfmt, PWA.
 Play plane is `z = 0`; camera is straight-on modest perspective; full-width play area (height fixed, width derived from aspect).
 
-## Current state — Step 6 COMPLETE (`docs/PLAN-STEP-6-rules.md`)
+## Current state — Step 7 COMPLETE (`docs/PLAN-STEP-7-content.md`)
 
-Workstreams **A → B → C → D** all landed (`a4cf524` + `a088c64`, 2026-10-21).
-Steps 1–5 committed and closed (chopping-bug fix `72bb752`); pending [You]
-eyeball tuning unchanged, nothing blocks on it.
+Workstreams **A → B → C → D** landed 2026-10-22/23. Steps 1–6 remain closed;
+pending [You] eyeball tuning carries over, nothing blocks on it.
 
-- **A+B — round + HUD:** `a4cf524`. `game/Round.ts` — countdown, `over` latch,
-  `progress`, `secondsLeft` (ceil); `ROUND.duration = 30`; `fixedUpdate`
-  early-returns while over (freeze mid-air, Decision C), clock runs **last**
-  (Decision B), and `spawner.step(…, round.progress)` finally un-parks the
-  spawn ramp (3E). `ui/hud.ts` — centered `Score: N / Time: T` bar + game-over
-  card (final score, whole card = restart button); DOM writes only when a
-  displayed integer changes. `restart()` re-arms score/round/spawner,
-  `Pool.releaseAll()`, debris + swipes clear. Review fixes: `.game-over[hidden]`
-  (CSS display beat the `hidden` attr) and `pointer-events: auto` on the card.
-- **C — verification:** `a088c64`. `scripts/verify-rules.ts` + `pnpm verify:rules`
-  (32 checks): buzzer latches exactly once, ceil `secondsLeft`, reset round =
-  round 1 (clock + spawner cadence + skip counter), ramp bites (7 launches vs
-  2 at flat progress), `Pool.releaseAll` semantics, config sanity.
-- Missed fruit: no consequence (PLAN §6 — nothing implemented). No start
-  screen (step 9). Real models/assets: step 7; InstancedMesh: step 8.
+- **A — model seam + bake:** `f796649` + `fa878b4`. `ObjectModel` =
+  `{ parts, size }` | `{ asset, size }` (asset = step-9 loader seam; bake
+  throws). `rendering/Model.ts` `bakeModel`: clone parts, strip uv/uv1/tangent,
+  normalise indexing, bake local transforms, write linear vertex colours,
+  `mergeGeometries` → one geometry per def. One `MeshStandardMaterial` per
+  category (`vertexColors`, theme accent = emissive; `OBJECT_MATERIAL`).
+- **B — Halloween art:** `f045f02`. `content/models/halloween.ts` —
+  pumpkin/candy/skull producers; ghost dropped (white read as skull); pumpkin
+  is the one def with authored halves (`def.pieces`, flesh caps facing out).
+  Sizes ≤ 1.15 (candy) → max radius 0.996 ≤ `sideMargin`.
+- **C — Christmas + registry:** `content/models/christmas.ts` (ornament,
+  candyCane, gift, snowGlobe), `content/themes/christmas.ts`, and
+  `content/themes/index.ts` (`THEMES`, `ThemeId`, `DEFAULT_THEME_ID`,
+  `getTheme`, `resolveThemeId`). `main.ts` resolves `?theme=<id>` once before
+  `createScene`, logs `theme: <id>`, injects the resolved `Theme`. Zero gameplay
+  diffs.
+- **D — harness:** `scripts/verify-content.ts` + `pnpm verify:content` (111
+  checks): registry/fallback resolution, per-theme data contract, bake contract
+  (attrs, stripped uv, colour count, bbox fits + centred, authored pieces fit
+  their own size, asset throw, template untouched), spawn fit (`radius ≤
+sideMargin`, slugs, size band), import-graph isolation (gameplay never imports
+  themes/models; only `main.ts` imports the registry; rendering imports no
+  concrete theme/model; content stays data-only), material config. Negative-tested
+  by injecting a game → theme import.
+- **Not built (deliberate):** runtime `setTheme` hot-swap, theme picker UI,
+  glTF/textures, authored halves for every def, theme-tinted HUD — steps 9/10.
+  InstancedMesh / draw-call work is step 8 (plain meshes stay).
 
 ### Open items for next session
 
-- **[You] Step 6 by eye/on device:** HUD look (sizes/colours), card copy, 30 s
-  length + ramp feel — tune `ROUND.duration` and theme RampRanges; on-device
-  portrait, 60 FPS, both backends.
-- **[You] Step 2/3/4/5 tuning (carry-over):** `CUT` knob feel, `SWIPE.gateDistance`
-  by thumb, lighting/palette, `PLAYFIELD` numbers, arcs by eye; deferred `GRAVITY`
-  naming (2026-10-20, options listed in CHANGELOG).
-- **Next step:** step 7 (content/theme abstraction) — write
-  `docs/PLAN-STEP-7-content.md` at session start: real models behind the
-  `ObjectModel`/`pieces?` seams, a second theme proving the data-only swap
-  (PLAN §7/§10 `setTheme`), gameplay stays theme-ignorant (Decision 3D).
+- **[You] Step 7 by eye/on device:** both themes at 60 FPS (WebGPU + WebGL2),
+  portrait readability, restricted emissive, pumpkin cut halves; candy size /
+  palette feel; `?theme=christmas` on the installed PWA.
+- **[You] carry-over tuning:** `CUT`/`SWIPE` feel, lighting/palette,
+  `PLAYFIELD` numbers, arcs, HUD sizes/copy, `ROUND.duration` + ramp feel.
+- **Next step:** step 8 (perf/InstancedMesh) — write
+  `docs/PLAN-STEP-8-*.md` at session start; one mesh per pool slot and one draw
+  call per category are the step-7 baseline.
 
 ## Locked decisions
 
@@ -53,6 +62,7 @@ eyeball tuning unchanged, nothing blocks on it.
 **Step 4:** A buffer home = `game/Swipes.ts` (gameplay, DOM-free; `Input` stays a dumb adapter) · B gate = per-stroke world travel ≥ `SWIPE.gateDistance`, opens once, holds to stroke end · C drain at top of `fixedUpdate` (step 5 tests pre-move positions) · D `visibilitychange` clear lives in `main.ts`.
 **Step 5:** A pieces = separate debris ring, never the object pool (re-slice/score impossible by construction) · B piece geometry = `def.pieces?` authored at final size, else scaled clone (`pieceScale`) · C score rides on `SpawnedObject.score` (launch-set, reset-zeroed) · D hit test = pure scalar 3D sphere-vs-segment + `CUT.pad` · E cut runs inside the drain (pre-move); score + pieces fire BEFORE release.
 **Step 6:** A round clock = `game/Round.ts` (scalar state, `over` latch) · B `round.step` runs last in `fixedUpdate`; `over` → freeze mid-air · C `round.progress` feeds the spawn ramp (3E un-parked) · D HUD = `ui/hud.ts` on the step-1 root, DOM writes only on integer change · E restart re-arms every mutable system (score/round/spawner/pool/debris/swipes) · F missed fruit: no consequence (PLAN §6).
+**Step 7:** A procedural parts models, no assets · B `ObjectModel` parts | asset (asset = step-9 seam) · C bake once at boot, one geometry per def · D one material per category, accent = emissive · E boot-time `?theme=` registry · F default `pieceScale` clone, pumpkin authored halves · G `size` = max extent, radius ≤ `sideMargin` · H gameplay never imports themes/models (harness) · I Christmas per PLAN §7 · J no deps; only `BufferGeometryUtils` addon · K HUD unchanged · L `getTheme` + boot resolution; `setTheme` is step 10.
 
 ## Commands
 
@@ -64,12 +74,13 @@ pnpm verify:playfield    # bun scripts/verify-playfield.ts — fit/bounds/projec
 pnpm verify:launch       # bun scripts/verify-launch.ts — aim/integration/despawn/spawner
 pnpm verify:swipe        # bun scripts/verify-swipe.ts — buffer/gate/Input (44 checks)
 pnpm verify:cut          # bun scripts/verify-cut.ts — hit test/slicer/score/debris (68 checks)
-pnpm verify:rules       # bun scripts/verify-rules.ts — round/reset/ramp (32 checks)
+pnpm verify:rules        # bun scripts/verify-rules.ts — round/reset/ramp (32 checks)
+pnpm verify:content      # bun scripts/verify-content.ts — theme/bake/isolation (111 checks)
 pnpm lint                # oxlint
 pnpm fmt                 # oxfmt (write); use --check to verify
 ```
 
-Always finish a task with: `npx tsc --noEmit` → `npx oxlint` → `pnpm verify:foundation` → `pnpm verify:launch` → `pnpm verify:swipe` → `pnpm verify:cut` → `pnpm verify:rules` → `npx vite build`.
+Always finish a task with: `npx tsc --noEmit` → `npx oxlint` → `pnpm verify:foundation` → `pnpm verify:playfield` → `pnpm verify:launch` → `pnpm verify:swipe` → `pnpm verify:cut` → `pnpm verify:rules` → `pnpm verify:content` → `npx vite build`.
 
 ## Conventions / gotchas
 

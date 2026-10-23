@@ -4,6 +4,41 @@ Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log
 
 ## 2026-10-23
 
+### Step 7 — harness + close-out (D)
+
+- `scripts/verify-content.ts` + `pnpm verify:content` (111 checks): registry
+  lookup/fallback, per-theme contract (unique ids, category/score, hex colours,
+  range sanity, depth pinned), bake contract (attrs, stripped uv/uv1/tangent,
+  colour count, box fits + centred, authored pieces fit their own size, asset
+  throw, template untouched), spawn fit (radius ≤ `sideMargin`, slugs, size
+  band), import-graph isolation (gameplay, main-only registry, rendering,
+  content data-only), material config. Negative-tested with injected imports.
+- `scripts/node-shim.d.ts`: minimal `node:fs` declarations (no `@types/node`).
+- Close-out: AGENTS state/decisions/commands, README verify commands,
+  PERF-BUDGET bake note + current payload numbers.
+- Chain green: vendor 235.83 kB gzip, app 8.94 kB gzip, precache 1045.66 KiB;
+  no decoder assets.
+
+### Step 7 — Christmas theme + registry + boot selection (C)
+
+- `content/models/christmas.ts`: procedural recipes — ornament (globe + cap +
+  torus loop), candyCane (shaft + half-torus hook joined at the shaft top),
+  gift (box + two ribbons + two bow spheres), snowGlobe (glass + base + tree).
+  108–504 tris per def, all centered within 0.03 and inside `size`.
+- `content/themes/christmas.ts`: icy palette, cool lighting, own accents and
+  slightly tighter early spawn cadence — data-only swap proof.
+- `content/themes/index.ts`: `THEMES` registry, `ThemeId`, `DEFAULT_THEME_ID`,
+  `getTheme`, `resolveThemeId` (unknown/absent → default).
+- `main.ts`: resolves `?theme=<id>` once at boot, logs `theme: <id>`, injects
+  the resolved `Theme` everywhere (scene/views/spawner/debris/piece radii).
+  No gameplay file touched.
+- `README.md`: step 7 plan link + `?theme=christmas` note.
+- Payload: vendor +0.3 kB gzip, app +0.5 kB gzip; precache 1045.66 KiB.
+- Full chain green (foundation/playfield/launch/swipe/cut/rules + build).
+- Pending eyeball: Christmas silhouettes/palette, both themes on device.
+
+## 2026-10-23
+
 ### Step 7 — Halloween models + authored pumpkin halves (B)
 
 - `content/models/halloween.ts`: full procedural recipes — pumpkin (body +

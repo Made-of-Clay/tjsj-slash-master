@@ -19,6 +19,7 @@ Docs:
 - [`docs/PLAN-STEP-4-swipe.md`](docs/PLAN-STEP-4-swipe.md) — step 4 plan
 - [`docs/PLAN-STEP-5-cutting.md`](docs/PLAN-STEP-5-cutting.md) — step 5 plan
 - [`docs/PLAN-STEP-6-rules.md`](docs/PLAN-STEP-6-rules.md) — step 6 plan
+- [`docs/PLAN-STEP-7-content.md`](docs/PLAN-STEP-7-content.md) — step 7 plan
 - [`docs/PERF-BUDGET.md`](docs/PERF-BUDGET.md) — frame, allocation and payload budgets, and how to measure
 
 Stack:
@@ -41,6 +42,9 @@ Run dev mode
 pnpm dev
 ```
 
+Append `?theme=christmas` to boot the Christmas theme; unknown ids fall back
+to Halloween.
+
 Foundation checks (loop, input, pool, swipe projector)
 
 ```bash
@@ -57,6 +61,15 @@ Launch checks (aim math, integration, despawn, pool exhaustion, side launches, a
 
 ```bash
 pnpm verify:launch
+```
+
+Swipe, cut, rules and content/theme checks
+
+```bash
+pnpm verify:swipe
+pnpm verify:cut
+pnpm verify:rules
+pnpm verify:content
 ```
 
 Build

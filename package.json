@@ -18,7 +18,8 @@
     "verify:launch": "bun scripts/verify-launch.ts",
     "verify:swipe": "bun scripts/verify-swipe.ts",
     "verify:cut": "bun scripts/verify-cut.ts",
-    "verify:rules": "bun scripts/verify-rules.ts"
+    "verify:rules": "bun scripts/verify-rules.ts",
+    "verify:content": "bun scripts/verify-content.ts"
   },
   "dependencies": {
     "stats.js": "^0.17.0",

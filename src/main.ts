@@ -22,7 +22,7 @@ import {
     TONE_MAPPING_EXPOSURE,
 } from './config';
 import type { ToneMappingMode } from './config';
-import { halloween } from './content/themes/halloween';
+import { getTheme, resolveThemeId } from './content/themes';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
 import type { SwipeSegment } from './game/Input';
@@ -82,7 +82,12 @@ async function boot(): Promise<void> {
     // the two backends do not behave identically.
     console.info(`backend: ${renderer.backend.constructor.name}`);
 
-    const scene = createScene(halloween);
+    const theme = getTheme(
+        resolveThemeId(new URLSearchParams(window.location.search).get('theme')),
+    );
+    console.info(`theme: ${theme.id}`);
+
+    const scene = createScene(theme);
 
     const camera = createCamera(canvas.clientWidth / canvas.clientHeight);
     // Live playfield: width is derived from the aspect, so gameplay reads its
@@ -107,15 +112,15 @@ async function boot(): Promise<void> {
     const objectViews = createObjectViews(
         scene,
         objects.items.length,
-        halloween.objects,
-        halloween.accents,
+        theme.objects,
+        theme.accents,
     );
 
     // Step 3D: the real launcher. It reads theme spawn rules + object defs
     // (decision D) and the live bounds each spawn, so it follows a resize.
     const spawner = new Spawner({
-        rules: halloween.spawnRules,
-        defs: halloween.objects,
+        rules: theme.spawnRules,
+        defs: theme.objects,
     });
 
     // Step 5B: sliced pieces are presentation, not gameplay — their own
@@ -125,7 +130,7 @@ async function boot(): Promise<void> {
     // clone scaled — mirroring the geometry resolution in DebrisViews
     // (Decision B), so the cut path allocates nothing.
     const pieceRadii = new Map<string, readonly [number, number]>();
-    for (const def of halloween.objects) {
+    for (const def of theme.objects) {
         const radiusAt = (index: number): number => {
             const authored = def.pieces?.[index];
             return authored
@@ -143,7 +148,7 @@ async function boot(): Promise<void> {
     const debrisViews = createDebrisViews(
         scene,
         CUT.capacity,
-        halloween.objects,
+        theme.objects,
         objectViews.materials,
     );
 

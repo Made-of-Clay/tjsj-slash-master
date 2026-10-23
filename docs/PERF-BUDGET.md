@@ -61,17 +61,21 @@ Step 3 (physics + launcher):
 - No shadow maps. WebGPU node shadows need explicit setup; step 2 has no use
   for them. Revisit only if a flat scene reads badly.
 - TSL over hand-written shader complexity — the same look for less maintenance.
+- Content models bake once at boot (step 7): parts are merged into one
+  vertex-coloured geometry per def, one mesh per pool slot. No textures, no
+  network, no per-frame work; draw calls unchanged. The payload delta is code
+  only (~+0.5 kB gzip).
 
 ## Payload
 
 Precache size is a cold-start budget. Every asset here is downloaded on first
 load before the game can start.
 
-|                  | At foundation        | Notes                               |
+|                  | Current              | Notes                               |
 | ---------------- | -------------------- | ----------------------------------- |
 | Precache entries | 20                   | workbox glob                        |
-| Precache total   | 1020 kB              | what a first-time visitor downloads |
-| Three.js chunk   | 831 kB (234 kB gzip) | `three/webgpu`; grows with imports  |
+| Precache total   | 1046 kB              | what a first-time visitor downloads |
+| Three.js chunk   | 860 kB (236 kB gzip) | `three/webgpu`; grows with imports  |
 
 Guard rails learned the hard way at the foundation:
 
@@ -131,6 +135,10 @@ perf improvement.
 pnpm verify:foundation   # loop, pool, input, projector
 pnpm verify:playfield    # full-width bounds, contains/clamp, debug rect
 pnpm verify:launch       # aim math, integration, despawn, spawner guarantees
+pnpm verify:swipe        # buffer, gate, Input
+pnpm verify:cut          # hit test, slicer, score, debris
+pnpm verify:rules        # round, reset, spawn ramp
+pnpm verify:content      # themes, bake, import-graph isolation
 pnpm exec tsc --noEmit && pnpm exec oxfmt --check && pnpm exec oxlint && pnpm build
 ls dist/assets | grep -E 'draco|basis|ktx2' # expect no output
 ```
