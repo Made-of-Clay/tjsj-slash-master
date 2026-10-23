@@ -101,6 +101,9 @@ function simulateArc(
 
 const portrait = computePlayBounds(PLAYFIELD, CAMERA.fov, 9 / 16);
 const radius = boxBoundingRadius(halloween.objects[0].model.size);
+// Side launches start at `halfWidth + that def's radius`; step 7 themes mix
+// sizes, so the containment bound must use the largest.
+const maxRadius = Math.max(...halloween.objects.map((def) => boxBoundingRadius(def.model.size)));
 
 // ===== aim math =====
 // launchVy/aimVx must produce a velocity that peaks at apexY and lands at
@@ -367,7 +370,7 @@ console.log('Arc containment');
         // else may be observed outside that boundary.
         check(
             `[${tag}] no arc escapes the sides`,
-            maxAbsX <= bounds.halfWidth + radius + 1e-6,
+            maxAbsX <= bounds.halfWidth + maxRadius + 1e-6,
             `max|X|=${maxAbsX.toFixed(3)} limit=${(bounds.halfWidth + radius).toFixed(3)}`,
         );
     }

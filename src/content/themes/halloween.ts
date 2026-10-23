@@ -1,4 +1,9 @@
-import { createPumpkinModel, createSkullModel } from '../models/halloween';
+import {
+    createCandyModel,
+    createPumpkinHalves,
+    createPumpkinModel,
+    createSkullModel,
+} from '../models/halloween';
 import type { Theme } from '../types';
 
 /**
@@ -25,15 +30,22 @@ export const halloween: Theme = {
         target: '#ff7a45',
         restricted: '#22c1c3',
     },
-    // Step 7: procedural parts models. Size 1.0 → bounding radius 0.87, which
-    // PLAYFIELD.sideMargin (1.0) covers, so edge spawns never clip. 7A ships
-    // two-part seam stand-ins; 7B replaces the builders with the full recipes.
+    // Step 7 procedural art: sizes ≤ 1.15 → radius ≤ 0.996, inside
+    // PLAYFIELD.sideMargin, so edge spawns never clip. Pumpkin is the one def
+    // with authored slice halves; the rest fall back to scaled clones.
     objects: [
         {
             id: 'pumpkin',
             score: 1,
             category: 'target',
             model: createPumpkinModel(),
+            pieces: createPumpkinHalves(),
+        },
+        {
+            id: 'candy',
+            score: 1,
+            category: 'target',
+            model: createCandyModel(),
         },
         {
             id: 'skull',
@@ -43,8 +55,7 @@ export const halloween: Theme = {
         },
     ],
     spawnRules: {
-        // Ramp: [You] 2026-10-18. Cadence tightens and batches grow across
-        // the round (see RampRange course correction in types.ts).
+        // Cadence tightens and batches grow across the round.
         intervalRange: { early: [1.2, 2.0], late: [0.6, 1.1] },
         batchRange: { early: [1, 1], late: [2, 3] },
         speedRange: [0.9, 1.1],

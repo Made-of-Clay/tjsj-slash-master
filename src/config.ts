@@ -126,7 +126,7 @@ export const PLAYFIELD = {
     centerY: 0,
     /**
      * Guards each side edge so objects never clip; must cover the largest
-     * model radius (step 7: ≤ 0.95). `verify-content` enforces it.
+     * model radius (step 7: ≤ 0.996). `verify-content` enforces it.
      */
     sideMargin: 1.0,
 } as const;

@@ -2,6 +2,26 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-23
+
+### Step 7 — Halloween models + authored pumpkin halves (B)
+
+- `content/models/halloween.ts`: full procedural recipes — pumpkin (body +
+  stem), candy (barrel body + two wrapper cones), ghost (`LatheGeometry` profile
+  - recessed eye spheres), skull (cranium + jaw + dark sockets). 80–376 tris
+    per def, every part inside its `size` box.
+- `content/themes/halloween.ts`: four defs (`pumpkin`/`candy`/`ghost` +1,
+  `skull` −1); sizes 1.0–1.1 → radius ≤ 0.95 ≤ `PLAYFIELD.sideMargin`.
+- Authored pieces: `createPumpkinHalves()` → two half-shells (`phiStart` 0/π)
+  with flesh-coloured caps facing out of each half. Other defs keep the
+  default `CUT.pieceScale` clone.
+- `scripts/verify-launch.ts`: containment bound uses the largest theme radius
+  (side launches offset by each def's own radius; mixed sizes broke the old
+  pumpkin-only bound).
+- Payload: vendor +0.3 kB gzip, app +0.2 kB gzip; precache 1042.77 KiB.
+- Full chain green (foundation/playfield/launch/swipe/cut/rules + build).
+- Pending eyeball: proportions/colours under ACES, emissive balance, cut halves.
+
 ## 2026-10-22
 
 ### Step 7 — model seam + bake (A)
