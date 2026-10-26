@@ -284,6 +284,7 @@ console.log('Input adapter');
             clientY: number;
             pointerId?: number;
             samples?: Array<{ clientX: number; clientY: number }>;
+            noCoalesced?: boolean;
         },
     ): void {
         const event = new Event(type) as Event & {
@@ -295,7 +296,9 @@ console.log('Input adapter');
         event.pointerId = init.pointerId ?? 1;
         event.clientX = init.clientX;
         event.clientY = init.clientY;
-        event.getCoalescedEvents = () => init.samples ?? [];
+        if (!init.noCoalesced) {
+            event.getCoalescedEvents = () => init.samples ?? [];
+        }
         target.dispatchEvent(event);
     }
 
@@ -384,6 +387,37 @@ console.log('Input adapter');
         received.length === 4,
         `got=${received.length}`,
     );
+
+    // Older Safari has no Coalesced Events API; the event is still a sample.
+    fire(target, 'pointerdown', { clientX: 100, clientY: 300, pointerId: 3 });
+    const beforeNoCoalesced = received.length;
+    fire(target, 'pointermove', {
+        clientX: 500,
+        clientY: 300,
+        pointerId: 3,
+        noCoalesced: true,
+    });
+    check(
+        'pointermove without coalesced events still emits',
+        received.length === beforeNoCoalesced + 1,
+        `got=${received.length}`,
+    );
+
+    // A stroke interrupted by an app switch never gets its pointerup.
+    const beforeCancel = ends;
+    input.cancelStroke();
+    check(
+        'cancelStroke ends the stroke and releases capture',
+        ends === beforeCancel + 1 && !target.captured.has(3),
+        `ends=${ends}`,
+    );
+    fire(target, 'pointerdown', { clientX: 100, clientY: 100, pointerId: 4 });
+    check(
+        'a new stroke starts after cancelStroke',
+        starts.length === 3 && target.captured.has(4),
+        `starts=${starts.length}`,
+    );
+    fire(target, 'pointerup', { clientX: 100, clientY: 100, pointerId: 4 });
 
     // End-to-end seam: Input -> Swipes gate -> per-step drain (step 5's input).
     const seamTarget = new FakeTarget();

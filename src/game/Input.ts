@@ -78,6 +78,25 @@ export class Input {
         this.#strokeEndHandlers.push(handler);
     }
 
+    /**
+     * Ends any in-flight stroke without a pointerup (tab hidden, app switched,
+     * cancelled gesture) and re-arms input for the next pointerdown.
+     */
+    cancelStroke(): void {
+        if (this.#pointerId === null) return;
+
+        if (this.#target.hasPointerCapture(this.#pointerId)) {
+            this.#target.releasePointerCapture(this.#pointerId);
+        }
+        for (const handler of this.#strokeEndHandlers) {
+            handler();
+        }
+
+        this.#pointerId = null;
+        this.#hasPrevious = false;
+        this.#rect = null;
+    }
+
     dispose(): void {
         this.#target.removeEventListener('pointerdown', this.#pointerDownHandler);
         this.#target.removeEventListener('pointermove', this.#pointerMoveHandler);
@@ -114,8 +133,10 @@ export class Input {
 
         // A fast flick on a 120Hz screen can pack several samples into one
         // frame. Coalesced events recover the intermediate positions instead of
-        // aliasing a long stroke down to a single segment.
-        const samples = event.getCoalescedEvents();
+        // aliasing a long stroke down to a single segment. Older Safari has no
+        // such API, and then the event itself is the only sample.
+        const samples =
+            typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [];
         if (samples.length === 0) {
             this.#emit(event);
             return;
@@ -129,18 +150,7 @@ export class Input {
     /** Handler passed as callback to event listener  */
     #pointerUpHandler = (event: PointerEvent): void => {
         if (event.pointerId !== this.#pointerId) return;
-
-        if (this.#target.hasPointerCapture(event.pointerId)) {
-            this.#target.releasePointerCapture(event.pointerId);
-        }
-
-        for (const handler of this.#strokeEndHandlers) {
-            handler();
-        }
-
-        this.#pointerId = null;
-        this.#hasPrevious = false;
-        this.#rect = null;
+        this.cancelStroke();
     };
 
     #emit(event: PointerEvent): void {

@@ -107,8 +107,9 @@ async function boot(): Promise<void> {
     const objects = new Pool(POOL_SIZE, createSpawnedObject, resetSpawnedObject);
     const physics = new Physics();
 
-    // Step 3B: view meshes for every pool slot. Models = the theme's object
-    // defs; colour comes from theme accents, never from gameplay (decision D).
+    // Step 8A: one instanced mesh per def; `count` is the draw count. Models =
+    // the theme's object defs; colour comes from theme accents, never from
+    // gameplay (step 3 decision D).
     const objectViews = createObjectViews(
         scene,
         objects.items.length,
@@ -189,9 +190,13 @@ async function boot(): Promise<void> {
 
     // Discarded with the loop's backlog on a hidden tab, so a stale stroke
     // never hits the resumed sim. The listener lives here rather than in
-    // Swipes so the class stays DOM-free for verify-swipe (bun).
+    // Swipes so the class stays DOM-free for verify-swipe (bun). Input needs
+    // the same reset: a stroke interrupted by the app switch never sees its
+    // pointerup, and without this every later touch is ignored.
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) swipes.clear();
+        if (!document.hidden) return;
+        input.cancelStroke();
+        swipes.clear();
     });
 
     // Consumed from fixedUpdate below; function declarations so the sim path

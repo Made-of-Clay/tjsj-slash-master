@@ -72,7 +72,7 @@ pnpm build               # production build (also check no draco/basis in dist/a
 pnpm verify:foundation   # bun scripts/verify-foundation.ts — 58 foundation checks
 pnpm verify:playfield    # bun scripts/verify-playfield.ts — fit/bounds/projector regression
 pnpm verify:launch       # bun scripts/verify-launch.ts — aim/integration/despawn/spawner
-pnpm verify:swipe        # bun scripts/verify-swipe.ts — buffer/gate/Input (44 checks)
+pnpm verify:swipe        # bun scripts/verify-swipe.ts — buffer/gate/Input (47 checks)
 pnpm verify:cut          # bun scripts/verify-cut.ts — hit test/slicer/score/debris (68 checks)
 pnpm verify:rules        # bun scripts/verify-rules.ts — round/reset/ramp (32 checks)
 pnpm verify:content      # bun scripts/verify-content.ts — theme/bake/isolation (111 checks)
