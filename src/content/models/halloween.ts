@@ -110,3 +110,30 @@ export function createSkullModel(): ObjectModel {
         ],
     };
 }
+
+/** Hazard (9B): dark shell, stubby fuse and a lit tip — reads as "do not cut". */
+export function createBombModel(): ObjectModel {
+    return {
+        kind: 'parts',
+        size: 1,
+        parts: [
+            { geometry: new SphereGeometry(0.36, 16, 12), color: '#22232a' },
+            {
+                geometry: new CylinderGeometry(0.09, 0.11, 0.05, 8),
+                color: '#3a3c46',
+                position: [0, 0.37, 0],
+            },
+            {
+                geometry: new CylinderGeometry(0.022, 0.03, 0.14, 6),
+                color: '#c8b06a',
+                position: [0.2, 0.38, 0],
+                rotation: [0, 0, -Math.PI / 2],
+            },
+            {
+                geometry: new SphereGeometry(0.03, 8, 6),
+                color: '#ff7a45',
+                position: [0.29, 0.39, 0],
+            },
+        ],
+    };
+}

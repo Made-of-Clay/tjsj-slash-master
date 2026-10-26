@@ -119,6 +119,22 @@ for (const id of THEME_IDS) {
         defs.filter((def) => def.category === 'restricted').every((def) => def.score < 0),
     );
     check(
+        `[${tag}] has a hazard`,
+        defs.some((def) => def.category === 'hazard'),
+    );
+    check(
+        `[${tag}] hazard scores are negative`,
+        defs.filter((def) => def.category === 'hazard').every((def) => def.score < 0),
+    );
+    check(
+        `[${tag}] declared weights are positive`,
+        defs.every((def) => (def.weight ?? 1) > 0),
+    );
+    check(
+        `[${tag}] hazards are rarer than the default weight`,
+        defs.filter((def) => def.category === 'hazard').every((def) => (def.weight ?? 1) < 1),
+    );
+    check(
         `[${tag}] model sizes are positive`,
         defs.every((def) => def.model.size > 0),
     );

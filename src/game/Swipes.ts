@@ -33,6 +33,8 @@ export class Swipes {
     #traveled = 0;
     /** Gate state: opens at `#gateDistance`, closes on the next stroke boundary. */
     #live = false;
+    /** Monotonic stroke id (step 9B): combo identity, never reset by clear(). */
+    #stroke = 0;
 
     /**
      * @param gateDistance stroke travel before segments count, world units on
@@ -58,8 +60,14 @@ export class Swipes {
         return this.#live;
     }
 
+    /** Id of the latest stroke; advances on `beginStroke` only. */
+    get stroke(): number {
+        return this.#stroke;
+    }
+
     /** Stroke boundary (`Input.onStrokeStart`): the gate opens from zero again. */
     beginStroke(): void {
+        this.#stroke += 1;
         this.#traveled = 0;
         this.#live = false;
     }

@@ -1,5 +1,6 @@
 import {
     createCandyCaneModel,
+    createCoalModel,
     createGiftModel,
     createOrnamentModel,
     createSnowGlobeModel,
@@ -24,6 +25,7 @@ export const christmas: Theme = {
     accents: {
         target: '#ffcf5a',
         restricted: '#7fd4e8',
+        hazard: '#ff4d5a',
     },
     objects: [
         {
@@ -49,6 +51,13 @@ export const christmas: Theme = {
             score: -1,
             category: 'restricted',
             model: createSnowGlobeModel(),
+        },
+        {
+            id: 'coal',
+            score: -2,
+            category: 'hazard',
+            weight: 0.15,
+            model: createCoalModel(),
         },
     ],
     spawnRules: {

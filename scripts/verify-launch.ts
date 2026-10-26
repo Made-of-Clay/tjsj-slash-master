@@ -433,6 +433,71 @@ function collectLaunches(
     return launches;
 }
 
+// ===== weighted spawn =====
+console.log('Weighted spawn');
+{
+    const pumpkin = halloween.objects.find((def) => def.id === 'pumpkin')!;
+    const bomb = halloween.objects.find((def) => def.id === 'bomb')!;
+
+    const weighted: SpawnRules = {
+        intervalRange: { early: [0.05, 0.05], late: [0.05, 0.05] },
+        batchRange: { early: [1, 1], late: [1, 1] },
+        speedRange: [1, 1],
+        apexRange: [0.6, 0.6],
+        depthRange: [0, 0],
+        spinRange: [0, 0],
+        sideLaunchChance: 0,
+    };
+
+    const spawner = new Spawner({
+        rules: weighted,
+        defs: [
+            { ...pumpkin, weight: 3 },
+            { ...bomb, weight: 1 },
+        ],
+        rand: seededRandom(7),
+    });
+    const pool = new Pool(POOL_SIZE, createSpawnedObject, resetSpawnedObject);
+    const bounds = computePlayBounds(PLAYFIELD, CAMERA.fov, 0.6);
+    const counts = new Map<string, number>();
+
+    for (let step = 0; step < 400; step += 1) {
+        spawner.step(pool, bounds, 0.1, 0);
+        for (const object of pool.items) {
+            if (!object.active) continue;
+            counts.set(object.defId, (counts.get(object.defId) ?? 0) + 1);
+        }
+        pool.releaseAll();
+    }
+
+    const pumpkins = counts.get('pumpkin') ?? 0;
+    const bombs = counts.get('bomb') ?? 0;
+    const ratio = pumpkins / Math.max(bombs, 1);
+    check(
+        'weights shape the def distribution (3:1)',
+        ratio > 2.5 && ratio < 3.6,
+        `pumpkins=${pumpkins} bombs=${bombs} ratio=${ratio.toFixed(2)}`,
+    );
+
+    const none = new Spawner({
+        rules: weighted,
+        defs: [
+            { ...pumpkin, weight: 1 },
+            { ...bomb, weight: 0 },
+        ],
+        rand: seededRandom(11),
+    });
+    let seen = false;
+    for (let step = 0; step < 50; step += 1) {
+        none.step(pool, bounds, 0.1, 0);
+        for (const object of pool.items) {
+            if (object.active && object.defId === 'bomb') seen = true;
+        }
+        pool.releaseAll();
+    }
+    check('a zero weight never spawns', !seen);
+}
+
 if (failures > 0) {
     throw new Error(`${failures} launch check(s) failed`);
 }

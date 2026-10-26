@@ -5,17 +5,17 @@ the game slow. Numbers are enforced by `src/config.ts`, not hardcoded inline.
 
 ## Frame budget
 
-| Metric                | Budget                   | Enforced by                      |
-| --------------------- | ------------------------ | -------------------------------- |
-| Frame rate            | 60 FPS                   | —                                |
-| Frame time            | ≤ 16.67 ms               | `FIXED_STEP`                     |
-| Sim step              | 1/60 s, fixed            | `FIXED_STEP`                     |
-| Sub-steps per frame   | ≤ 5, then drop backlog   | `MAX_SUB_STEPS`                  |
-| Stall tolerance       | ≤ 250 ms of a long frame | `MAX_FRAME_SECONDS`              |
-| Pixel ratio           | ≤ 2                      | `MAX_PIXEL_RATIO`                |
-| Live objects          | 64                       | `POOL_SIZE`                      |
-| Draw calls            | ≤ 14 while swiping       | `InstancedMesh` per def (step 8) |
-| FPS readout smoothing | 0.1 EMA                  | `FPS_SMOOTHING`                  |
+| Metric                | Budget                   | Enforced by                                                      |
+| --------------------- | ------------------------ | ---------------------------------------------------------------- |
+| Frame rate            | 60 FPS                   | —                                                                |
+| Frame time            | ≤ 16.67 ms               | `FIXED_STEP`                                                     |
+| Sim step              | 1/60 s, fixed            | `FIXED_STEP`                                                     |
+| Sub-steps per frame   | ≤ 5, then drop backlog   | `MAX_SUB_STEPS`                                                  |
+| Stall tolerance       | ≤ 250 ms of a long frame | `MAX_FRAME_SECONDS`                                              |
+| Pixel ratio           | ≤ 2                      | `MAX_PIXEL_RATIO`                                                |
+| Live objects          | 64                       | `POOL_SIZE`                                                      |
+| Draw calls            | ≤ 17 while swiping       | `InstancedMesh` per def (step 8) + per category (sparks, step 9) |
+| FPS readout smoothing | 0.1 EMA                  | `FPS_SMOOTHING`                                                  |
 
 Subtract from that 16.67 ms, per frame:
 
@@ -119,9 +119,9 @@ mid-range phone.
 ### Draw calls
 
 `main.ts` logs `draws: N triangles: N` once per second in dev (step 8D,
-`DEBUG_PERF`). Budget is ≤ 14 while swiping (12 instanced defs in the Christmas
-worst case + background + blade trail); an idle field is much lower. Read it
-after a busy round, not at boot.
+`DEBUG_PERF`). Budget is ≤ 17 while swiping (12 instanced defs in the Christmas
+worst case + 3 spark meshes + background + blade trail); an idle field is much
+lower. Read it after a busy round, not at boot.
 
 ### In-browser, desktop
 

@@ -2,6 +2,7 @@ import {
     BoxGeometry,
     ConeGeometry,
     CylinderGeometry,
+    IcosahedronGeometry,
     SphereGeometry,
     TorusGeometry,
 } from 'three/webgpu';
@@ -101,6 +102,33 @@ export function createSnowGlobeModel(): ObjectModel {
                 position: [0, -0.4, 0],
             },
             { geometry: new ConeGeometry(0.16, 0.4, 8), color: '#2e8f5a' },
+        ],
+    };
+}
+
+/** Hazard (9B): a lump of coal — the Christmas answer to a bomb. */
+export function createCoalModel(): ObjectModel {
+    return {
+        kind: 'parts',
+        size: 1,
+        parts: [
+            {
+                geometry: new IcosahedronGeometry(0.38, 0),
+                color: '#262a31',
+                scale: [1.05, 0.9, 0.9],
+            },
+            {
+                geometry: new IcosahedronGeometry(0.2, 0),
+                color: '#343943',
+                position: [0.2, 0.16, 0.05],
+                rotation: [0.3, 0.4, 0],
+            },
+            {
+                geometry: new BoxGeometry(0.26, 0.08, 0.06),
+                color: '#b03a3a',
+                position: [-0.06, 0.3, 0.18],
+                rotation: [0, 0, 0.35],
+            },
         ],
     };
 }

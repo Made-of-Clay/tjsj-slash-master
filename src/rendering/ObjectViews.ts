@@ -31,6 +31,7 @@ export function createObjectViews(
     const materials: Record<ObjectCategory, MeshStandardMaterial> = {
         target: createObjectMaterial(accents.target, OBJECT_MATERIAL.targetEmissive),
         restricted: createObjectMaterial(accents.restricted, OBJECT_MATERIAL.restrictedEmissive),
+        hazard: createObjectMaterial(accents.hazard, OBJECT_MATERIAL.hazardEmissive),
     };
 
     const instanced = new Map<string, InstancedMesh>();

@@ -106,6 +106,7 @@ export const OBJECT_MATERIAL = {
     /** Category accent emissive. */
     targetEmissive: 0.06,
     restrictedEmissive: 0.25,
+    hazardEmissive: 0.5,
 } as const;
 
 // ===== PLAYFIELD =====
@@ -169,6 +170,13 @@ export const LIGHTING = {
     rim: 1.2,
 } as const;
 
+// ===== COMBO =====
+// Per-stroke combo (step 9B): the k-th cut of one stroke adds
+// `step × (k − 1)`, so a 4-cut swipe pays 6 × step. [You] tunes the number.
+export const COMBO = {
+    step: 2,
+} as const;
+
 // ===== EFFECTS =====
 // Cut feedback (step 9A). Sparks are presentation only: a fixed ring of unlit
 // shards, drawn as one instanced mesh per category. Numbers are scaffolded for
@@ -199,6 +207,8 @@ export const SHAKE = {
     cutTrauma: 0.22,
     /** Trauma added per restricted cut. */
     hitTrauma: 0.6,
+    /** Trauma added per hazard cut: the whole frame kicks. */
+    hazardTrauma: 1,
     /** Trauma lost per second. */
     decay: 2.4,
     /** Peak translation offset, world units. */

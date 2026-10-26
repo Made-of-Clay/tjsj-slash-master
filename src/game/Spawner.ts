@@ -93,6 +93,8 @@ export function aimVx(x0: number, targetX: number, tFlight: number): number {
 export class Spawner {
     #rules: SpawnRules;
     #defs: readonly GameObjectDefinition[];
+    /** Prefix sums of per-def spawn weights; last entry = total weight. */
+    #weights: readonly number[];
     #rand: () => number;
     /** Seconds accumulated toward the next spawn event. */
     #timer = 0;
@@ -108,6 +110,33 @@ export class Spawner {
         this.#rules = config.rules;
         this.#defs = config.defs;
         this.#rand = config.rand ?? Math.random;
+
+        // Weighted pick table, built once (step 9B). All-default weights are
+        // exactly uniform, so themes without hazards keep their distribution.
+        const weights: number[] = [];
+        let total = 0;
+        for (const def of config.defs) {
+            total += Math.max(def.weight ?? 1, 0);
+            weights.push(total);
+        }
+        if (total <= 0) {
+            weights.length = 0;
+            for (let index = 0; index < config.defs.length; index += 1) {
+                weights.push(index + 1);
+            }
+        }
+        this.#weights = weights;
+    }
+
+    /** Weighted def choice; `#weights` holds the prefix sums. */
+    #pickDef(): GameObjectDefinition {
+        const weights = this.#weights;
+        const roll = this.#rand() * weights[weights.length - 1];
+
+        for (let index = 0; index < weights.length; index += 1) {
+            if (roll < weights[index]) return this.#defs[index];
+        }
+        return this.#defs[this.#defs.length - 1];
     }
 
     /** Cumulative count of spawns the pool was too full to serve. */
@@ -181,10 +210,7 @@ export class Spawner {
      * field — the guarantee holds for any theme data, not just tuned data.
      */
     #configure(object: SpawnedObject, bounds: PlayBounds): void {
-        const def =
-            this.#defs[
-                Math.min(Math.floor(this.#rand() * this.#defs.length), this.#defs.length - 1)
-            ];
+        const def = this.#pickDef();
         const radius = boxBoundingRadius(def.model.size);
         const inset = Math.max(bounds.halfWidth - radius, 0);
         const y0 = LAUNCH_LINE_Y - radius;

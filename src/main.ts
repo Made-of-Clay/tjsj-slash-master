@@ -37,6 +37,7 @@ import { Pool } from './game/Pool';
 import { Swipes } from './game/Swipes';
 import { Slicer } from './game/Slicer';
 import { Score } from './game/Score';
+import { Combo } from './game/Combo';
 import { boxBoundingRadius, createSpawnedObject, resetSpawnedObject } from './game/SpawnedObject';
 import type { SpawnedObject } from './game/SpawnedObject';
 import {
@@ -54,6 +55,7 @@ import { createSparkViews, syncSparkViews } from './rendering/SparkViews';
 import { createShake } from './rendering/Shake';
 import { Effects } from './game/Effects';
 import { createHud } from './ui/hud';
+import { createRecords } from './ui/records';
 import { createUiRoot } from './ui/root';
 
 // No-op without a service worker, so this is safe in dev as well.
@@ -173,6 +175,7 @@ async function boot(): Promise<void> {
     syncViewport();
 
     const hud = createHud(createUiRoot());
+    const records = createRecords();
 
     const input = new Input(canvas, createSwipeProjector(camera));
 
@@ -186,22 +189,37 @@ async function boot(): Promise<void> {
     // at the top of each fixed step, where step 5's Slicer cuts against
     // pre-move pool state.
     const swipes = new Swipes(SWIPE.gateDistance);
+    const score = new Score();
+    const combo = new Combo();
+    let strokeActive = false;
     input.onSwipe((segment) => swipes.push(segment));
-    input.onStrokeStart(() => swipes.beginStroke());
-    input.onStrokeEnd(() => swipes.endStroke());
+    input.onStrokeStart(() => {
+        swipes.beginStroke();
+        combo.beginStroke();
+        strokeActive = true;
+    });
+    input.onStrokeEnd(() => {
+        swipes.endStroke();
+        strokeActive = false;
+    });
 
     // Step 5: drained segments become cuts; each cut scores and spawns two
     // debris pieces. Cuts run inside the drain — before spawner/physics move
     // anything — so the hit test and the pieces' inherited velocity both see
     // pre-move state (Decision 4C).
-    const score = new Score();
 
     // Step 9A: every cut answers with pieces, sparks and a shake kick — all
     // read from the parent before `pool.release` zeroes it (step 5E).
     function cutFeedback(parent: SpawnedObject, nx: number, ny: number): void {
         debris.spawn(parent, nx, ny);
         effects.burst(parent.position.x, parent.position.y, parent.radius, nx, ny, parent.category);
-        shake.add(parent.category === 'restricted' ? SHAKE.hitTrauma : SHAKE.cutTrauma);
+        shake.add(
+            parent.category === 'target'
+                ? SHAKE.cutTrauma
+                : parent.category === 'hazard'
+                  ? SHAKE.hazardTrauma
+                  : SHAKE.hitTrauma,
+        );
     }
 
     const slicer = new Slicer({
@@ -219,6 +237,7 @@ async function boot(): Promise<void> {
         if (!document.hidden) return;
         input.cancelStroke();
         swipes.clear();
+        strokeActive = false;
     });
 
     // Consumed from fixedUpdate below; function declarations so the sim path
@@ -235,7 +254,12 @@ async function boot(): Promise<void> {
 
     function cutSwipe(segment: SwipeSegment): void {
         if (DEBUG_SWIPE) logSwipe(segment);
-        slicer.cut(objects, segment);
+
+        const cuts = slicer.cut(objects, segment);
+        if (cuts > 0) {
+            // Step 9B: per-stroke combo, scored additively on top of the cuts.
+            score.add(combo.register(swipes.stroke, cuts));
+        }
     }
 
     // Step 8D: dev draw-call readout. `renderer.info` resets per render, so it
@@ -266,6 +290,8 @@ async function boot(): Promise<void> {
     // from round 1. View sync picks the resets up on the next frame.
     function restart(): void {
         score.reset();
+        combo.reset();
+        strokeActive = false;
         round.reset();
         spawner.reset();
         objects.releaseAll();
@@ -273,9 +299,13 @@ async function boot(): Promise<void> {
         effects.clear();
         shake.reset();
         swipes.clear();
+        overShown = false;
     }
 
     hud.onRestart(restart);
+
+    // The card is shown once, so the record is written once per round.
+    let overShown = false;
 
     const loop = new GameLoop({
         fixedUpdate: (dt) => {
@@ -308,8 +338,13 @@ async function boot(): Promise<void> {
             syncSparkViews(sparkViews, effects.sparks);
             // HUD reads latest state (never steps); both calls no-op when
             // nothing changed, so the steady frame does no DOM work.
-            hud.sync(score.total, round.secondsLeft);
-            if (round.over) hud.showGameOver(score.total);
+            const liveCombo = strokeActive && !round.over ? combo.count : 0;
+            hud.sync(score.total, round.secondsLeft, liveCombo);
+            if (round.over && !overShown) {
+                overShown = true;
+                const isBest = records.submit(score.total);
+                hud.showGameOver(score.total, records.best, isBest);
+            }
             renderer.render(scene, camera);
             if (DEBUG_PERF) logPerf();
             stats?.end();

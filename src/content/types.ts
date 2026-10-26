@@ -1,6 +1,11 @@
 import type { BufferGeometry } from 'three/webgpu';
 
-export type ObjectCategory = 'target' | 'restricted';
+/**
+ * `target` = cut it, `restricted` = costs points, `hazard` = costs more points
+ * and hits harder (step 9B). Gameplay reads the category; rendering picks the
+ * accent from it.
+ */
+export type ObjectCategory = 'target' | 'restricted' | 'hazard';
 
 /** One model piece in local space; baked into the def's single geometry at boot. */
 export interface ModelPart {
@@ -34,6 +39,8 @@ export interface GameObjectDefinition {
      * `CUT.pieceScale` clone. Extras are ignored (two pieces per cut).
      */
     pieces?: readonly ObjectModel[];
+    /** Relative spawn chance; default 1. Lower = rarer (hazards are rare). */
+    weight?: number;
 }
 
 /** `[min, max]` pair, sampled uniformly. */
@@ -87,6 +94,7 @@ export interface ThemeLighting {
 export interface ThemeAccents {
     target: string;
     restricted: string;
+    hazard: string;
 }
 
 /** A named set of objects, palette and spawn rules. */

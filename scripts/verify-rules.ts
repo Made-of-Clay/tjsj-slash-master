@@ -25,10 +25,11 @@ function check(name: string, condition: boolean, detail = ''): void {
 }
 
 import { BoxGeometry } from 'three/webgpu';
-import { ROUND } from '../src/config.ts';
+import { COMBO, ROUND } from '../src/config.ts';
 import type { SpawnRules } from '../src/content/types.ts';
 import type { PlayBounds } from '../src/rendering/Camera.ts';
 import { Round } from '../src/game/Round.ts';
+import { Combo } from '../src/game/Combo.ts';
 import { Spawner } from '../src/game/Spawner.ts';
 import { Pool } from '../src/game/Pool.ts';
 import { createSpawnedObject, resetSpawnedObject } from '../src/game/SpawnedObject.ts';
@@ -277,6 +278,29 @@ console.log('Round x Spawner');
         firstRun += 1;
     }
     check('a second round runs the full duration again', firstRun === 60, `steps=${firstRun}`);
+}
+
+// ===== combo =====
+console.log('Combo');
+{
+    const combo = new Combo();
+
+    check('the first cut of a stroke pays nothing', combo.register(1, 1) === 0);
+    check('the second cut pays one step', combo.register(1, 1) === COMBO.step);
+    check(
+        'the third cut pays two steps',
+        combo.register(1, 1) === COMBO.step * 2,
+        `bonus=${combo.register(1, 0)}`,
+    );
+    check('count tracks the stroke', combo.count === 3, `count=${combo.count}`);
+
+    // A 4-cut swipe is the documented total: 0 + 1 + 2 + 3 steps = 6.
+    const four = new Combo();
+    check('a four-cut swipe pays six steps in total', four.register(2, 4) === COMBO.step * 6);
+
+    check('a new stroke restarts the count', combo.register(2, 1) === 0);
+    check('beginStroke clears the displayed count', (combo.beginStroke(), combo.count === 0));
+    check('reset forgets the stroke id too', (combo.reset(), combo.register(2, 1) === 0));
 }
 
 // ===== config =====

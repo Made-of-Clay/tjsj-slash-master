@@ -1,4 +1,5 @@
 import {
+    createBombModel,
     createCandyModel,
     createPumpkinHalves,
     createPumpkinModel,
@@ -29,6 +30,7 @@ export const halloween: Theme = {
     accents: {
         target: '#ff7a45',
         restricted: '#22c1c3',
+        hazard: '#ff3b30',
     },
     // Step 7 procedural art: sizes ≤ 1.15 → radius ≤ 0.996, inside
     // PLAYFIELD.sideMargin, so edge spawns never clip. Pumpkin is the one def
@@ -52,6 +54,13 @@ export const halloween: Theme = {
             score: -1,
             category: 'restricted',
             model: createSkullModel(),
+        },
+        {
+            id: 'bomb',
+            score: -3,
+            category: 'hazard',
+            weight: 0.15,
+            model: createBombModel(),
         },
     ],
     spawnRules: {
