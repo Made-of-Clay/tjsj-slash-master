@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "tjsj-REPLACE-ME",
+    "site": "tjsj-slash-master",
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
