@@ -11,6 +11,10 @@ export interface Hud {
     showGameOver(finalScore: number, best: number, isBest: boolean): void;
     /** Restart fires only from the card; the handler re-arms the round. */
     onRestart(handler: () => void): void;
+    /** Mute toggle: fires on tap; the caller persists and re-applies state. */
+    onMute(handler: () => void): void;
+    /** Reflect the persisted mute state on the control. */
+    setMuted(muted: boolean): void;
 }
 
 // Combo linger (step 9 feedback): the last count stays legible after the stroke
@@ -34,6 +38,12 @@ export function createHud(root: HTMLElement): Hud {
     comboEl.className = 'hud-combo';
     comboEl.hidden = true;
     root.append(comboEl);
+
+    // Appended before the card so the game-over overlay covers it.
+    const mute = document.createElement('button');
+    mute.className = 'hud-mute';
+    mute.type = 'button';
+    root.append(mute);
 
     // Fixed overlay, so it covers the root's padding and centers regardless.
     const overlay = document.createElement('div');
@@ -118,5 +128,17 @@ export function createHud(root: HTMLElement): Hud {
         });
     }
 
-    return { sync, showGameOver, onRestart };
+    function onMute(handler: () => void): void {
+        mute.addEventListener('click', handler);
+    }
+
+    function setMuted(muted: boolean): void {
+        mute.textContent = muted ? '🔇' : '🔊';
+        mute.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+        mute.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    }
+
+    setMuted(false);
+
+    return { sync, showGameOver, onRestart, onMute, setMuted };
 }

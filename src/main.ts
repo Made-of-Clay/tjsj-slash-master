@@ -56,6 +56,8 @@ import { createShake } from './rendering/Shake';
 import { Effects } from './game/Effects';
 import { createHud } from './ui/hud';
 import { createRecords } from './ui/records';
+import { createAudio } from './audio/Audio';
+import { createHaptics } from './ui/haptics';
 import { createUiRoot } from './ui/root';
 
 // No-op without a service worker, so this is safe in dev as well.
@@ -177,6 +179,18 @@ async function boot(): Promise<void> {
     const hud = createHud(createUiRoot());
     const records = createRecords();
 
+    // Step 9C: audio unlocks on the first gesture (iOS rule); haptics are a
+    // silent no-op where the platform has no vibrate. Mute silences both.
+    const audio = createAudio();
+    const haptics = createHaptics();
+    let muted = records.muted;
+    audio.setMuted(muted);
+    hud.setMuted(muted);
+
+    function pulse(kind: 'cut' | 'hazard' | 'over'): void {
+        if (!muted) haptics.pulse(kind);
+    }
+
     const input = new Input(canvas, createSwipeProjector(camera));
 
     const bladeTrail = createBladeTrail(scene, 32);
@@ -194,6 +208,10 @@ async function boot(): Promise<void> {
     let strokeActive = false;
     input.onSwipe((segment) => swipes.push(segment));
     input.onStrokeStart(() => {
+        // Inside the gesture: this is the only moment iOS allows an
+        // AudioContext to start.
+        audio.unlock();
+        audio.play('swoosh');
         swipes.beginStroke();
         combo.beginStroke();
         strokeActive = true;
@@ -220,6 +238,14 @@ async function boot(): Promise<void> {
                   ? SHAKE.hazardTrauma
                   : SHAKE.hitTrauma,
         );
+
+        if (parent.category === 'hazard') {
+            audio.play('boom');
+            pulse('hazard');
+        } else {
+            audio.play('pop');
+            pulse('cut');
+        }
     }
 
     const slicer = new Slicer({
@@ -258,7 +284,9 @@ async function boot(): Promise<void> {
         const cuts = slicer.cut(objects, segment);
         if (cuts > 0) {
             // Step 9B: per-stroke combo, scored additively on top of the cuts.
-            score.add(combo.register(swipes.stroke, cuts));
+            const bonus = combo.register(swipes.stroke, cuts);
+            if (bonus > 0) audio.play('combo', combo.count);
+            score.add(bonus);
         }
     }
 
@@ -289,6 +317,7 @@ async function boot(): Promise<void> {
     // Every mutable system back to boot state — or round 2 silently differs
     // from round 1. View sync picks the resets up on the next frame.
     function restart(): void {
+        audio.play('ui');
         score.reset();
         combo.reset();
         strokeActive = false;
@@ -303,6 +332,15 @@ async function boot(): Promise<void> {
     }
 
     hud.onRestart(restart);
+
+    hud.onMute(() => {
+        audio.unlock();
+        muted = !muted;
+        records.setMuted(muted);
+        audio.setMuted(muted);
+        hud.setMuted(muted);
+        audio.play('ui');
+    });
 
     // The card is shown once, so the record is written once per round.
     let overShown = false;
@@ -344,6 +382,8 @@ async function boot(): Promise<void> {
                 overShown = true;
                 const isBest = records.submit(score.total);
                 hud.showGameOver(score.total, records.best, isBest);
+                audio.play('over');
+                pulse('over');
             }
             renderer.render(scene, camera);
             if (DEBUG_PERF) logPerf();
