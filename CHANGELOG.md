@@ -2,7 +2,87 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-26
+
+### Dev overlays opt-in
+
+- stats.js meter + playfield guide rect now require `?dev` on the dev server
+  (both were always on in dev and the meter covered the pause button). Meter
+  moved to bottom-left. Production still drops both.
+
 ## 2026-10-25
+
+### Step 9 — flow + close-out (D)
+
+- `game/Flow.ts`: `ready | playing | paused`, `active` gate,
+  `start/pause/resume/restart/reset`; restart skips the start card.
+- `ui/hud.ts`: start card at boot, pause button (safe-area top-left) + resume
+  card, shared `.overlay` card builder; pause button hides while a card is up.
+  Mute + pause are appended after the cards so both stay tappable.
+- `main.ts`: `fixedUpdate` gated on `flow.active && !round.over`; start tap
+  unlocks audio; pause cancels the stroke + clears the swipe buffer; round end
+  hides the pause control; restart re-arms flow.
+- `verify:polish` 51 checks (+16 flow: transitions, idempotence, restart/reset,
+  frozen clock before start, held clock while paused, buzzer after resume).
+- Docs close-out: AGENTS state/decisions/commands, README link + command,
+  PERF-BUDGET step-9 allocations, spark memory, payload table + target
+  revision (2.5 → measured 3.2 kB gzip).
+- Chain green: foundation/playfield/launch/swipe(47)/cut(68)/rules(40)/
+  content(133)/perf(79)/polish(51) + build. Vendor 865.48 kB (237.64 gzip),
+  app 34.13 kB (12.44 gzip), precache 1061.77 KiB; no decoder/audio assets.
+- Pending [You]: device pass — sparks/shake feel, combo linger, hazard read,
+  audio mix, haptics, start/pause flow, `draws ≤ 17` at 60 FPS.
+
+### Step 9 — audio + haptics (C)
+
+- `audio/Audio.ts`: procedural `AudioEngine`, one lazy `AudioContext` unlocked
+  inside the first gesture (`resume()` if suspended), failure latch; synth
+  voices `swoosh/pop/boom/combo/over/ui`, master gain 0.5, 40 ms pop-stack cap;
+  `last`/`unlocked`/`muted` exposed for the harness; no assets.
+- `ui/haptics.ts`: `navigator.vibrate` patterns (`cut` 12 ms, `hazard`
+  [24,40,60], `over` [60,60,120]); silent no-op without vibrate; follows mute.
+- `ui/hud.ts`: mute button (safe-area top-right) with `aria-pressed`; state
+  persisted as `slash-master.muted`, applied before unlock.
+- `main.ts`: unlock on stroke start / mute tap, voices on cut/hazard/combo/
+  over/ui, pulses on cut/hazard/over.
+- `scripts/verify-polish.ts` + `pnpm verify:polish` (35 checks at C): unlock
+  idempotence/failure latch, muted-silent-but-recorded, intensity threading,
+  haptic patterns + absent platform, records best/mute persistence, garbage
+  reads, throwing-storage fallback.
+- Payload: app 32.73 kB (12.05 gzip).
+
+### Step 9 — scoring depth (B)
+
+- `game/Combo.ts`: per-stroke counter, k-th cut pays `COMBO.step × (k − 1)`
+  (4-cut swipe = 6 × step); `Swipes.stroke` monotonic id as combo identity.
+- `ui/hud.ts`: `Combo ×N` from the second cut, 700 ms hold + 300 ms fade,
+  DOM writes only on change.
+- `content/types.ts`: `hazard` category + `GameObjectDefinition.weight`
+  (default 1); `ObjectCategory` material/spark accent; bomb (−3) / coal (−2)
+  procedural models; weight 0.15 → ~3.6 % of spawns.
+- `game/Spawner.ts`: boot-time prefix-sum weighted pick; all-default weights
+  stay exactly uniform.
+- `ui/records.ts`: guarded `localStorage` best (`slash-master.best`) with
+  in-memory fallback; HUD card shows `Best N` / `New best! N`, written once
+  per round.
+- Harness: rules 40 (+8 combo), launch +2 weighted pick, content 133 (+22
+  hazard/weight/bake).
+- Payload: app 30.01 kB (10.98 gzip); draw budget row → ≤ 17.
+
+### Step 9 — cut juice (A)
+
+- `game/Effects.ts`: fixed spark ring (`EFFECTS.capacity` 128, 7 per cut,
+  0.45 s life), burst along the slice normal, overflow recycles the oldest.
+- `rendering/SparkViews.ts`: one `InstancedMesh` per category over a shared
+  unit shard (instance scale = world size, no double scaling), dynamic usage,
+  culling off, allocation-free sync.
+- `rendering/Shake.ts`: scalar trauma, quadratic falloff, sine phases, base
+  camera pose captured; `apply()` after `syncViewport`.
+- `main.ts`: cut sink bursts sparks + shake before `pool.release`; restart
+  clears both.
+- Harness: perf 79 (+25 spark construction/sync/scene-graph + allocation
+  guard over `Effects.step`, spark sync, `Shake.apply`).
+- Payload: app 29.72 kB (10.88 gzip).
 
 ### Step 8 — close-out (D)
 

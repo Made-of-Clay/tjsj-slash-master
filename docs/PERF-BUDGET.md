@@ -65,6 +65,24 @@ Step 8 (perf pass):
 - `verify:perf` statically guards those hot bodies against allocation
   constructs, so the rule is enforced rather than remembered.
 
+Step 9 (polish):
+
+- `Effects` — fixed ring of plain objects built in the constructor; `burst`
+  writes fields, `step` swaps-and-shrinks in place. Overflow recycles the
+  oldest slot instead of growing.
+- `SparkViews` — one `InstancedMesh` per category, matrices written through one
+  module-level `Object3D`; a category with no live sparks resets its count.
+- `Shake` — scalar trauma; `apply` recomposes the offset from the captured
+  base pose every frame, no vectors allocated.
+- `Combo`/`Flow`/`Round` — scalar state only; the combo bonus is arithmetic on
+  the cut path.
+- HUD combo timers are event-driven (`setTimeout` on a state change), never
+  per-frame DOM writes; the audio voices allocate disposable WebAudio nodes
+  per event by design (WebAudio nodes are single-use), never in the frame
+  path.
+- `verify:perf`'s allocation guard now also covers `Effects.step`,
+  `syncSparkViews` and `Shake.apply`.
+
 ## Rendering
 
 - Pixel ratio capped at 2. A 3x phone display is a 2.25x fragment cost for no
@@ -83,7 +101,10 @@ Step 8 (perf pass):
   independent of `POOL_SIZE` — and a def with no live slots draws nothing.
   Instance buffers are 64 × 64 B each (≤ 48 KiB total). Frustum culling is off
   on instanced meshes: instances span the field, so whole-mesh culling would
-  only pop spawns. No textures, no network, no per-frame geometry work.
+  only pop spawns. Step 9 sparks add one mesh per category (3) with
+  `EFFECTS.capacity` (128) instances — 128 × 64 B = 8 KiB per category, ≤ 24
+  KiB — drawn from one shared unit shard with instance scale carrying the size.
+  No textures, no network, no per-frame geometry work.
 
 ## Payload
 
@@ -93,8 +114,13 @@ load before the game can start.
 |                  | Current              | Notes                               |
 | ---------------- | -------------------- | ----------------------------------- |
 | Precache entries | 20                   | workbox glob                        |
-| Precache total   | 1049 kB              | what a first-time visitor downloads |
-| Three.js chunk   | 863 kB (237 kB gzip) | `three/webgpu`; grows with imports  |
+| Precache total   | 1062 kB              | what a first-time visitor downloads |
+| Three.js chunk   | 865 kB (238 kB gzip) | `three/webgpu`; grows with imports  |
+| Game chunk       | 34 kB (12.5 kB gzip) | steps 1–9; +3.2 kB gzip over step 8 |
+
+Step 9 adds no assets: sound is synthesised in `audio/Audio.ts`, sparks are one
+instanced unit shard, the hint cards are DOM. The +3.2 kB gzip is code — above
+the ~2.5 kB hope, kept because the alternative was cutting feel.
 
 Guard rails learned the hard way at the foundation:
 
@@ -103,8 +129,9 @@ Guard rails learned the hard way at the foundation:
   `three/addons/<path>`.
 - Check `dist/assets` after adding any import: `ls dist/assets | grep -E
 'draco|basis|ktx2'`. Those decoders should never reappear.
-- Model and texture assets are step 9's problem. `POOL_SIZE`-sized geometry
-  loaded up front will undo the payload win above.
+- Audio/image assets stay out: sound is synthesised and models are procedural,
+  so the precache is code only. A single texture atlas or audio sprite would
+  cost more than every step since 7.
 
 ## Measuring
 
@@ -166,6 +193,7 @@ pnpm verify:cut          # hit test, slicer, score, debris
 pnpm verify:rules        # round, reset, spawn ramp
 pnpm verify:content      # themes, bake, import-graph isolation
 pnpm verify:perf         # instanced views, draw-call ceiling, allocation guard
+pnpm verify:polish       # audio/haptics/records/flow state machines
 pnpm exec tsc --noEmit && pnpm exec oxfmt --check && pnpm exec oxlint && pnpm build
 ls dist/assets | grep -E 'draco|basis|ktx2' # expect no output
 ```

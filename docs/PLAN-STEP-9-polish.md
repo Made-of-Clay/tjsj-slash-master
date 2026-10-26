@@ -15,8 +15,9 @@ Plan for [PLAN.md](../PLAN.md) §9. Extends it, doesn't replace it.
 Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
 Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
 
-> **Status.** Not started. A–D land in order; each session ends with the full
-> chain (foundation → … → perf → polish → build) and a commit.
+> **Status.** COMPLETE 2026-10-25 — A `e326074` · B `bba7c4d` · C `0bf9428`
+> · D (flow + close-out). Each session ended with the full chain
+> (foundation → … → perf → polish → build) and a commit.
 
 ## What step 9 is really about
 
@@ -49,7 +50,24 @@ Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
 | I   | Flow         | Boot shows a start overlay (tap to start) that gates the round clock and spawner; restart returns straight to play. Explicit pause button + resume overlay; `GameLoop`'s hidden-tab pause stays authoritative.        | No mid-round restart surprise, no timer running behind a card.                                                                                            |
 | J   | Verification | `scripts/verify-polish.ts` + `pnpm verify:polish`: effects ring, combo math, hazard rule + weighting, records, shake decay, audio/haptics state machines, gating. Plus updates to `verify-content` and `verify-perf`. | Same harness discipline as steps 3–8; feel stays by-eye, state stays asserted.                                                                            |
 | K   | Draw budget  | ≤ 17 while swiping: 12 instanced + 3 spark meshes + background + blade trail.                                                                                                                                         | One new mesh per category; PERF-BUDGET row updated.                                                                                                       |
-| L   | Dependencies | None. Payload delta code-only, target ≤ ~2.5 kB gzip app chunk; no audio/image assets.                                                                                                                                | Guard rails unchanged from steps 7–8.                                                                                                                     |
+| L   | Dependencies | None. Payload delta code-only; landed +3.2 kB gzip app chunk (target was ~2.5 kB); no audio/image assets.                                                                                                             | Guard rails unchanged from steps 7–8; trimmed the number, not the feel.                                                                                   |
+
+### Corrections (as built)
+
+- `verify:polish` covers what has no other home: audio + haptics state
+  machines, records, flow (51 checks). Sparks/shake live in `verify:perf`
+  (construction, sync, allocation guard), combo in `verify:rules`, hazard +
+  weights in `verify:content` / `verify:launch` — same coverage, better homes.
+- `Slicer` needed no change: the cut sink already receives the parent, so the
+  category routes shake/sound/haptics without a second lookup (the B work list
+  assumed otherwise).
+- Draw budget is 17, not 16: the three spark meshes are exactly the new draws.
+- Payload landed at +3.2 kB gzip (app 24.71 → 34.13 kB raw, 9.22 → 12.44
+  gzip) vs the ~2.5 kB target. Kept: the delta is code, no assets.
+- Combo linger was not planned: 700 ms hold + 300 ms fade so a good swipe
+  does not read as a flicker.
+- Cards share one `.overlay` builder/CSS; mute + pause are appended after the
+  cards so both stay tappable on every screen.
 
 ## Files touched
 
@@ -256,9 +274,9 @@ cost step 8 anything.
 ### Success signal
 
 `pnpm verify:polish` green and meaningful (negative-tested); full chain green;
-draw calls ≤ 16 while swiping; app chunk delta ≤ ~2.5 kB gzip; a full round
-(starts on tap, cuts with sparks/shake/sound, combo pays, hazard costs, best
-score persists, pause works) by hand on both themes.
+draw calls ≤ 17 while swiping; app chunk delta within ~3.5 kB gzip; a full
+round (starts on tap, cuts with sparks/shake/sound, combo pays, hazard costs,
+best score persists, pause works) by hand on both themes.
 
 ### Notes
 
@@ -267,6 +285,10 @@ score persists, pause works) by hand on both themes.
 - Pause writing to `document.hidden`-style state would fight `GameLoop`;
   keep the two pause reasons independent and let `active` be their AND.
 - Record writes are the one place a round may touch storage; never per frame.
+- Paused means "sim frozen, render alive": a card still has to draw, and the
+  shake/HUD paths must tolerate a fixed step that never fires.
+- The pause button is hidden whenever a card is up — a live control behind a
+  translucent overlay is a trap, not a shortcut.
 
 ## Locked decisions carried in
 

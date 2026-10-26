@@ -22,6 +22,8 @@ function check(name: string, condition: boolean, detail = ''): void {
 }
 
 import { createAudio } from '../src/audio/Audio.ts';
+import { Flow } from '../src/game/Flow.ts';
+import { Round } from '../src/game/Round.ts';
 import type { SynthFactory, Voice } from '../src/audio/Audio.ts';
 import { createHaptics } from '../src/ui/haptics.ts';
 import { createRecords } from '../src/ui/records.ts';
@@ -192,6 +194,62 @@ function memoryStorage(initial: Record<string, string> = {}): RecordStorage {
 
     const absent = createRecords(null);
     check('null storage is an in-memory store', absent.best === 0 && absent.submit(3));
+}
+
+// ===== flow =====
+console.log('Flow');
+{
+    const flow = new Flow();
+
+    check('boot is ready, not playing', flow.state === 'ready' && !flow.active);
+    check('a resume before start does nothing', (flow.resume(), flow.state === 'ready'));
+
+    flow.start();
+    check('start begins play', flow.state === 'playing' && flow.active);
+    check('start is idempotent', (flow.start(), flow.state === 'playing'));
+
+    flow.pause();
+    check('pause holds the round', flow.state === 'paused' && !flow.active);
+    check('pausing twice stays paused', (flow.pause(), flow.state === 'paused'));
+
+    flow.resume();
+    check('resume returns to play', flow.active);
+    check('a start while playing is ignored', (flow.start(), flow.state === 'playing'));
+
+    flow.restart();
+    check('restart skips the start card', flow.state === 'playing');
+    flow.reset();
+    check('reset returns to the start card', flow.state === 'ready' && !flow.active);
+}
+
+{
+    // Mirrors the `fixedUpdate` gate in main.ts.
+    const flow = new Flow();
+    const round = new Round(1);
+    const step = (dt: number): void => {
+        if (!flow.active || round.over) return;
+        round.step(dt);
+    };
+
+    step(0.5);
+    check('the clock is frozen before start', round.progress === 0);
+
+    flow.start();
+    step(0.5);
+    check('the clock runs while playing', round.progress === 0.5);
+
+    flow.pause();
+    step(0.25);
+    check('a pause holds the clock', round.progress === 0.5);
+
+    flow.resume();
+    step(1);
+    check('the buzzer latches after resume', round.over && round.progress === 1);
+    check('the flow stays playing past the buzzer', flow.active);
+
+    const frozen = round.secondsLeft;
+    step(1);
+    check('an over round ignores further steps', round.secondsLeft === frozen);
 }
 
 if (failures > 0) {

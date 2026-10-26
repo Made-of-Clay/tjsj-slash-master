@@ -38,6 +38,7 @@ import { Swipes } from './game/Swipes';
 import { Slicer } from './game/Slicer';
 import { Score } from './game/Score';
 import { Combo } from './game/Combo';
+import { Flow } from './game/Flow';
 import { boxBoundingRadius, createSpawnedObject, resetSpawnedObject } from './game/SpawnedObject';
 import type { SpawnedObject } from './game/SpawnedObject';
 import {
@@ -93,9 +94,11 @@ async function boot(): Promise<void> {
     // the two backends do not behave identically.
     console.info(`backend: ${renderer.backend.constructor.name}`);
 
-    const theme = getTheme(
-        resolveThemeId(new URLSearchParams(window.location.search).get('theme')),
-    );
+    const params = new URLSearchParams(window.location.search);
+    // Dev-only overlays are opt-in (`?dev`): the stats meter and the playfield
+    // guide otherwise sit on top of the HUD controls.
+    const devTools = import.meta.env.DEV && params.has('dev');
+    const theme = getTheme(resolveThemeId(params.get('theme')));
     console.info(`theme: ${theme.id}`);
 
     const scene = createScene(theme);
@@ -108,7 +111,7 @@ async function boot(): Promise<void> {
     // Dev-only arena outline so the full-width bounds are visible against every
     // aspect ratio. Vite folds DEBUG_PLAYFIELD to false in the production build,
     // so the rect and its geometry are dropped from the bundle.
-    const debugRect = DEBUG_PLAYFIELD ? createDebugRect(playfield.bounds) : undefined;
+    const debugRect = DEBUG_PLAYFIELD && devTools ? createDebugRect(playfield.bounds) : undefined;
     if (debugRect) {
         scene.add(debugRect);
     }
@@ -178,6 +181,9 @@ async function boot(): Promise<void> {
 
     const hud = createHud(createUiRoot());
     const records = createRecords();
+    // Step 9D: boot waits on the start card; restart skips it.
+    const flow = new Flow();
+    hud.showStart();
 
     // Step 9C: audio unlocks on the first gesture (iOS rule); haptics are a
     // silent no-op where the platform has no vibrate. Mute silences both.
@@ -304,8 +310,11 @@ async function boot(): Promise<void> {
 
     // Dev-only overlay. Vite drops the whole block from the production build,
     // so it never reaches the service worker's precache.
-    const stats = import.meta.env.DEV ? new (await import('stats.js')).default() : undefined;
+    const stats = devTools ? new (await import('stats.js')).default() : undefined;
     if (stats) {
+        // stats.js pins itself top-left, where the pause button lives.
+        stats.dom.style.top = 'auto';
+        stats.dom.style.bottom = '0';
         document.body.appendChild(stats.dom);
     }
 
@@ -318,6 +327,8 @@ async function boot(): Promise<void> {
     // from round 1. View sync picks the resets up on the next frame.
     function restart(): void {
         audio.play('ui');
+        flow.restart();
+        hud.setPlaying(true);
         score.reset();
         combo.reset();
         strokeActive = false;
@@ -333,6 +344,33 @@ async function boot(): Promise<void> {
 
     hud.onRestart(restart);
 
+    hud.onStart(() => {
+        // The card is DOM, so this tap never reaches Input: unlock here.
+        audio.unlock();
+        audio.play('ui');
+        flow.start();
+        hud.setPlaying(true);
+    });
+
+    hud.onPause(() => {
+        if (!flow.active || round.over) return;
+
+        flow.pause();
+        hud.setPlaying(false);
+        hud.showPaused();
+        // A stroke interrupted by the card must not cut on resume.
+        input.cancelStroke();
+        swipes.clear();
+        strokeActive = false;
+        audio.play('ui');
+    });
+
+    hud.onResume(() => {
+        flow.resume();
+        hud.setPlaying(true);
+        audio.play('ui');
+    });
+
     hud.onMute(() => {
         audio.unlock();
         muted = !muted;
@@ -347,7 +385,7 @@ async function boot(): Promise<void> {
 
     const loop = new GameLoop({
         fixedUpdate: (dt) => {
-            if (round.over) return;
+            if (!flow.active || round.over) return;
 
             // Step 5A: drain first, before spawner/physics move anything —
             // segments are cut against pre-move positions. Once per fixed
@@ -382,6 +420,7 @@ async function boot(): Promise<void> {
                 overShown = true;
                 const isBest = records.submit(score.total);
                 hud.showGameOver(score.total, records.best, isBest);
+                hud.setPlaying(false);
                 audio.play('over');
                 pulse('over');
             }

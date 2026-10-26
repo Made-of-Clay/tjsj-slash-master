@@ -1,7 +1,6 @@
 /**
  * Overlay mount point for the HUD — safe-area padded, pointer-events off so
- * swipes reach the canvas. `ui/hud.ts` (step 6) mounts the score/timer/game-over
- * widgets on it; combo widgets are step 9.
+ * swipes reach the canvas. `ui/hud.ts` mounts every widget and card on it.
  */
 export function createUiRoot(): HTMLDivElement {
     const root = document.createElement('div');

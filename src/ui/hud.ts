@@ -1,14 +1,21 @@
 /**
- * Step 6 HUD (Decision E): score + timer on the ui-root overlay, plus the
- * game-over card. Takes primitives only — no gameplay imports; `main.ts`
- * wiring feeds it. `sync` writes DOM only when a displayed value changes, so
- * the steady frame does zero DOM work.
+ * HUD (steps 6 + 9): score, timer and combo on the ui-root overlay, the
+ * start/pause/game-over cards, and the mute + pause controls. Takes primitives
+ * only — no gameplay imports; `main.ts` wiring feeds it. `sync` writes DOM only
+ * when a displayed value changes, so the steady frame does zero DOM work.
  */
 export interface Hud {
     /** Push the latest score / seconds-left / cuts this stroke; no-ops when unchanged. */
     sync(score: number, secondsLeft: number, combo: number): void;
     /** Reveal the card with the final score and the stored best. Latches until restart. */
     showGameOver(finalScore: number, best: number, isBest: boolean): void;
+    showStart(): void;
+    showPaused(): void;
+    /** The pause control only means something while a round runs. */
+    setPlaying(playing: boolean): void;
+    onStart(handler: () => void): void;
+    onResume(handler: () => void): void;
+    onPause(handler: () => void): void;
     /** Restart fires only from the card; the handler re-arms the round. */
     onRestart(handler: () => void): void;
     /** Mute toggle: fires on tap; the caller persists and re-applies state. */
@@ -21,6 +28,41 @@ export interface Hud {
 // ends, then fades — otherwise a good swipe reads as a flicker.
 const COMBO_HOLD_MS = 700;
 const COMBO_FADE_MS = 300;
+
+interface Overlay {
+    readonly root: HTMLElement;
+    readonly card: HTMLButtonElement;
+    readonly note: HTMLElement;
+}
+
+function createOverlay(
+    host: HTMLElement,
+    className: string,
+    titleText: string,
+    noteText: string,
+): Overlay {
+    const root = document.createElement('div');
+    root.className = `overlay ${className}`;
+    root.hidden = true;
+
+    // A real button: the whole card is the tap target and keyboard-reachable.
+    const card = document.createElement('button');
+    card.className = 'overlay-card';
+    card.type = 'button';
+
+    const title = document.createElement('span');
+    title.className = 'overlay-title';
+    title.textContent = titleText;
+
+    const note = document.createElement('span');
+    note.className = 'overlay-note';
+    note.textContent = noteText;
+
+    card.append(title, note);
+    root.append(card);
+    host.append(root);
+    return { root, card, note };
+}
 
 export function createHud(root: HTMLElement): Hud {
     // Flow layout (not absolute) so the root's safe-area padding applies.
@@ -39,33 +81,30 @@ export function createHud(root: HTMLElement): Hud {
     comboEl.hidden = true;
     root.append(comboEl);
 
-    // Appended before the card so the game-over overlay covers it.
+    const start = createOverlay(root, 'overlay-start', 'Slash Master', 'Tap to start');
+    const paused = createOverlay(root, 'overlay-pause', 'Paused', 'Tap to resume');
+    const overCard = createOverlay(root, 'overlay-game-over', "Time's up", 'Tap to restart');
+
+    const finalEl = document.createElement('span');
+    finalEl.className = 'overlay-score';
+    const bestEl = document.createElement('span');
+    bestEl.className = 'overlay-best';
+    overCard.card.insertBefore(bestEl, overCard.note);
+    overCard.card.insertBefore(finalEl, bestEl);
+
+    // Appended after the cards so both controls stay tappable on every screen.
     const mute = document.createElement('button');
     mute.className = 'hud-mute';
     mute.type = 'button';
     root.append(mute);
 
-    // Fixed overlay, so it covers the root's padding and centers regardless.
-    const overlay = document.createElement('div');
-    overlay.className = 'game-over';
-    overlay.hidden = true;
-    // A real button: whole card is the tap target, keyboard-reachable for free.
-    const card = document.createElement('button');
-    card.className = 'game-over-card';
-    card.type = 'button';
-    const title = document.createElement('span');
-    title.className = 'game-over-title';
-    title.textContent = "Time's up";
-    const final = document.createElement('span');
-    final.className = 'game-over-score';
-    const bestEl = document.createElement('span');
-    bestEl.className = 'game-over-best';
-    const prompt = document.createElement('span');
-    prompt.className = 'game-over-restart';
-    prompt.textContent = 'Tap to restart';
-    card.append(title, final, bestEl, prompt);
-    overlay.append(card);
-    root.append(overlay);
+    const pause = document.createElement('button');
+    pause.className = 'hud-pause';
+    pause.type = 'button';
+    pause.textContent = '❚❚';
+    pause.setAttribute('aria-label', 'Pause');
+    pause.hidden = true;
+    root.append(pause);
 
     // NaN primes the first sync to write both widgets.
     let shownScore = Number.NaN;
@@ -113,17 +152,51 @@ export function createHud(root: HTMLElement): Hud {
         if (over) return;
 
         over = true;
-        final.textContent = `Score ${finalScore}`;
+        finalEl.textContent = `Score ${finalScore}`;
         bestEl.textContent = isBest ? `New best! ${best}` : `Best ${best}`;
-        overlay.hidden = false;
+        overCard.root.hidden = false;
+    }
+
+    function showStart(): void {
+        start.root.hidden = false;
+    }
+
+    function showPaused(): void {
+        paused.root.hidden = false;
+    }
+
+    function setPlaying(playing: boolean): void {
+        pause.hidden = !playing;
+    }
+
+    function onStart(handler: () => void): void {
+        start.card.addEventListener('click', () => {
+            if (start.root.hidden) return;
+
+            start.root.hidden = true;
+            handler();
+        });
+    }
+
+    function onResume(handler: () => void): void {
+        paused.card.addEventListener('click', () => {
+            if (paused.root.hidden) return;
+
+            paused.root.hidden = true;
+            handler();
+        });
+    }
+
+    function onPause(handler: () => void): void {
+        pause.addEventListener('click', handler);
     }
 
     function onRestart(handler: () => void): void {
-        card.addEventListener('click', () => {
+        overCard.card.addEventListener('click', () => {
             if (!over) return;
 
             over = false;
-            overlay.hidden = true;
+            overCard.root.hidden = true;
             handler();
         });
     }
@@ -140,5 +213,17 @@ export function createHud(root: HTMLElement): Hud {
 
     setMuted(false);
 
-    return { sync, showGameOver, onRestart, onMute, setMuted };
+    return {
+        sync,
+        showGameOver,
+        showStart,
+        showPaused,
+        setPlaying,
+        onStart,
+        onResume,
+        onPause,
+        onRestart,
+        onMute,
+        setMuted,
+    };
 }

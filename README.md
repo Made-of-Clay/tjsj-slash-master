@@ -21,6 +21,7 @@ Docs:
 - [`docs/PLAN-STEP-6-rules.md`](docs/PLAN-STEP-6-rules.md) — step 6 plan
 - [`docs/PLAN-STEP-7-content.md`](docs/PLAN-STEP-7-content.md) — step 7 plan
 - [`docs/PLAN-STEP-8-perf.md`](docs/PLAN-STEP-8-perf.md) — step 8 plan
+- [`docs/PLAN-STEP-9-polish.md`](docs/PLAN-STEP-9-polish.md) — step 9 plan
 - [`docs/PERF-BUDGET.md`](docs/PERF-BUDGET.md) — frame, allocation and payload budgets, and how to measure
 
 Stack:
@@ -44,7 +45,8 @@ pnpm dev
 ```
 
 Append `?theme=christmas` to boot the Christmas theme; unknown ids fall back
-to Halloween.
+to Halloween. Append `?dev` (dev server only) for the stats.js FPS meter and
+the playfield guide overlay.
 
 Foundation checks (loop, input, pool, swipe projector)
 
@@ -64,7 +66,7 @@ Launch checks (aim math, integration, despawn, pool exhaustion, side launches, a
 pnpm verify:launch
 ```
 
-Swipe, cut, rules, content/theme and performance checks
+Swipe, cut, rules, content/theme, performance and polish checks
 
 ```bash
 pnpm verify:swipe
@@ -72,6 +74,7 @@ pnpm verify:cut
 pnpm verify:rules
 pnpm verify:content
 pnpm verify:perf
+pnpm verify:polish
 ```
 
 Build
