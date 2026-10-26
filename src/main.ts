@@ -11,6 +11,7 @@ import './style.css';
 import {
     CUT,
     DEBUG_CUT,
+    DEBUG_PERF,
     DEBUG_PLAYFIELD,
     DEBUG_SWIPE,
     LAUNCH_LINE_Y,
@@ -216,6 +217,18 @@ async function boot(): Promise<void> {
         slicer.cut(objects, segment);
     }
 
+    // Step 8D: dev draw-call readout. `renderer.info` resets per render, so it
+    // is read after the draw; throttled to 1 Hz to keep the console readable.
+    let nextPerfLog = 0;
+    function logPerf(): void {
+        const now = performance.now();
+        if (now < nextPerfLog) return;
+        nextPerfLog = now + 1000;
+
+        const info = renderer.info.render;
+        console.info(`draws: ${info.calls} triangles: ${info.triangles}`);
+    }
+
     // Dev-only overlay. Vite drops the whole block from the production build,
     // so it never reaches the service worker's precache.
     const stats = import.meta.env.DEV ? new (await import('stats.js')).default() : undefined;
@@ -269,6 +282,7 @@ async function boot(): Promise<void> {
             hud.sync(score.total, round.secondsLeft);
             if (round.over) hud.showGameOver(score.total);
             renderer.render(scene, camera);
+            if (DEBUG_PERF) logPerf();
             stats?.end();
         },
     });

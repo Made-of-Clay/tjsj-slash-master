@@ -186,3 +186,7 @@ export const DEBUG_SWIPE = import.meta.env.DEV;
 // Dev-only: log each cut the Slicer makes (defId + score delta) — the
 // feedback loop step 6's score display will visualize.
 export const DEBUG_CUT = import.meta.env.DEV;
+
+// Dev-only: once-per-second draw-call/triangle readout (step 8D). The phone
+// trace is the real measurement; this keeps the ceiling visible while tuning.
+export const DEBUG_PERF = import.meta.env.DEV;

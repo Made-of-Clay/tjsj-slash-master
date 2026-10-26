@@ -2,6 +2,71 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-25
+
+### Step 8 — close-out (D)
+
+- `config.ts` `DEBUG_PERF` (dev-only) + `main.ts` `logPerf()`: 1 Hz
+  `draws: N triangles: N` from `renderer.info.render`, read after the draw.
+  Production pays nothing.
+- `docs/PERF-BUDGET.md`: draw-call row (≤ 14 while swiping = 12 instanced
+  worst case + background + blade trail), instance memory (64 × 64 B per mesh,
+  ≤ 48 KiB), draw-call measurement recipe, step-8 allocation list, refreshed
+  payload table.
+- `AGENTS.md` state → step 8 complete (+ decisions A–J, `verify:perf` in the
+  done-chain), `README.md` plan link + verify command, plan-doc accuracy pass.
+- Chain green: foundation/playfield/launch/swipe(47)/cut(68)/rules(32)/
+  content(111)/perf(54) + build. Vendor 862.70 kB (236.61 gzip), app 24.71 kB
+  (9.22 gzip), precache 1049.05 KiB; no draco/basis/ktx2.
+- Pending [You]: phone trace — `draws ≤ 14` while swiping, 60 FPS on WebGPU +
+  WebGL2, both themes.
+
+### Step 8 — perf harness (C)
+
+- `scripts/verify-perf.ts` + `pnpm verify:perf` (54 checks): per-def
+  construction (shared material, `POOL_SIZE`/`CUT.capacity` capacity, dynamic
+  usage, culling off, zero counts), scene graph = defs × 3 and independent of
+  `POOL_SIZE`, sync contract (per-def grouping, composed matrices at 1e-6,
+  inactive/unknown skipped, empty sync resets counts and uploads nothing, data
+  sync bumps `instanceMatrix.version` once per drawn def, count capped),
+  debris routing by `pieceIndex`, material identity across both layers, and a
+  static allocation guard over six hot bodies.
+- Negative-tested: injected `new` in `syncViews`, an extra scene node per def
+  and a doubled debris count each fail loudly; reverted.
+
+### Step 8 — steady-frame allocation pass (B)
+
+- `Physics`/`Slicer`: index `pool.items` and skip `!active` instead of
+  `pool.each(callback)` — no per-step or per-segment closure. `Pool.each` is
+  now documented as one-shot only.
+- `ObjectViews`/`DebrisViews`: flat `meshes` arrays, indexed reset/write loops.
+- `Input`: one reused `SwipeSegment` wrapper (`#segment`) instead of a fresh
+  literal per move.
+- `BladeTrail`: point ring preallocated (`Vector3[]` + one position buffer);
+  `clone()`/`shift()` gone, dead camera/projector parameter dropped.
+- Audit: remaining `new`/`Array.from` sit in constructors and boot only.
+
+### Step 8 — instanced object and debris views (A)
+
+- `rendering/ObjectViews.ts`: one `InstancedMesh` per def (`POOL_SIZE`
+  instances), category material, `DynamicDrawUsage`, `frustumCulled = false`,
+  `count = 0` until synced; `syncViews` resets counts, writes grouped matrices
+  through one module-level `Object3D`, uploads only drawn defs.
+- `rendering/DebrisViews.ts`: one `InstancedMesh` per (def × pieceIndex),
+  `CUT.capacity` each, same sync contract.
+- Scene children now 9 (Halloween) / 12 (Christmas) regardless of
+  `POOL_SIZE`; per-slot `Mesh` path deleted, no fallback flag.
+- Runtime smoke: WebGPU draws `instanceCount = count`, `count = 0` → no draw;
+  both backends verified in the dev app.
+
+### Fix — mobile swipe input
+
+- Older Safari lacks `PointerEvent.getCoalescedEvents` → fall back to the
+  event itself instead of throwing.
+- A stroke interrupted by an app switch never saw `pointerup`, leaving swipe
+  state stuck; `Input.cancelStroke()` now runs on `visibilitychange` (alongside
+  `swipes.clear()`). Confirmed working on device by [You].
+
 ## 2026-10-23
 
 ### Step 7 — harness + close-out (D)

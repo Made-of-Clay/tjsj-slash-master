@@ -5,16 +5,17 @@ the game slow. Numbers are enforced by `src/config.ts`, not hardcoded inline.
 
 ## Frame budget
 
-| Metric                | Budget                   | Enforced by         |
-| --------------------- | ------------------------ | ------------------- |
-| Frame rate            | 60 FPS                   | —                   |
-| Frame time            | ≤ 16.67 ms               | `FIXED_STEP`        |
-| Sim step              | 1/60 s, fixed            | `FIXED_STEP`        |
-| Sub-steps per frame   | ≤ 5, then drop backlog   | `MAX_SUB_STEPS`     |
-| Stall tolerance       | ≤ 250 ms of a long frame | `MAX_FRAME_SECONDS` |
-| Pixel ratio           | ≤ 2                      | `MAX_PIXEL_RATIO`   |
-| Live objects          | 64                       | `POOL_SIZE`         |
-| FPS readout smoothing | 0.1 EMA                  | `FPS_SMOOTHING`     |
+| Metric                | Budget                   | Enforced by                      |
+| --------------------- | ------------------------ | -------------------------------- |
+| Frame rate            | 60 FPS                   | —                                |
+| Frame time            | ≤ 16.67 ms               | `FIXED_STEP`                     |
+| Sim step              | 1/60 s, fixed            | `FIXED_STEP`                     |
+| Sub-steps per frame   | ≤ 5, then drop backlog   | `MAX_SUB_STEPS`                  |
+| Stall tolerance       | ≤ 250 ms of a long frame | `MAX_FRAME_SECONDS`              |
+| Pixel ratio           | ≤ 2                      | `MAX_PIXEL_RATIO`                |
+| Live objects          | 64                       | `POOL_SIZE`                      |
+| Draw calls            | ≤ 14 while swiping       | `InstancedMesh` per def (step 8) |
+| FPS readout smoothing | 0.1 EMA                  | `FPS_SMOOTHING`                  |
 
 Subtract from that 16.67 ms, per frame:
 
@@ -49,6 +50,21 @@ Step 3 (physics + launcher):
   angular velocity, `defId`, `radius` and `active`, so a recycled object can
   never inherit stale state. This closes the rotation/scratch item step 3 owned.
 
+Step 8 (perf pass):
+
+- `ObjectViews`/`DebrisViews` — one `InstancedMesh` per def (objects) and per
+  def × piece index (debris). Sync zeroes counts, writes matrices through one
+  module-level `Object3D`, and iterates flat `meshes` arrays by index: no
+  iterators, no closures.
+- `Physics`/`Slicer` — index over `pool.items` and skip inactive slots, instead
+  of `pool.each(callback)`. No per-step or per-segment closure. `Pool.each()`
+  is now for one-shot passes only.
+- `Input` — one reused `SwipeSegment` wrapper (the old one allocated per move).
+- `BladeTrail` — point ring preallocated; adding a sample copies into it
+  (`clone()` and `shift()` are gone).
+- `verify:perf` statically guards those hot bodies against allocation
+  constructs, so the rule is enforced rather than remembered.
+
 ## Rendering
 
 - Pixel ratio capped at 2. A 3x phone display is a 2.25x fragment cost for no
@@ -62,9 +78,12 @@ Step 3 (physics + launcher):
   for them. Revisit only if a flat scene reads badly.
 - TSL over hand-written shader complexity — the same look for less maintenance.
 - Content models bake once at boot (step 7): parts are merged into one
-  vertex-coloured geometry per def, one mesh per pool slot. No textures, no
-  network, no per-frame work; draw calls unchanged. The payload delta is code
-  only (~+0.5 kB gzip).
+  vertex-coloured geometry per def. Step 8 draws them with one `InstancedMesh`
+  per def (objects) and per def × piece (debris). Scene children = defs × 3 —
+  independent of `POOL_SIZE` — and a def with no live slots draws nothing.
+  Instance buffers are 64 × 64 B each (≤ 48 KiB total). Frustum culling is off
+  on instanced meshes: instances span the field, so whole-mesh culling would
+  only pop spawns. No textures, no network, no per-frame geometry work.
 
 ## Payload
 
@@ -74,8 +93,8 @@ load before the game can start.
 |                  | Current              | Notes                               |
 | ---------------- | -------------------- | ----------------------------------- |
 | Precache entries | 20                   | workbox glob                        |
-| Precache total   | 1046 kB              | what a first-time visitor downloads |
-| Three.js chunk   | 860 kB (236 kB gzip) | `three/webgpu`; grows with imports  |
+| Precache total   | 1049 kB              | what a first-time visitor downloads |
+| Three.js chunk   | 863 kB (237 kB gzip) | `three/webgpu`; grows with imports  |
 
 Guard rails learned the hard way at the foundation:
 
@@ -96,6 +115,13 @@ precache. It appears in dev builds only.
 
 A "60 FPS" reading on a desktop is not evidence of anything. The budget is a
 mid-range phone.
+
+### Draw calls
+
+`main.ts` logs `draws: N triangles: N` once per second in dev (step 8D,
+`DEBUG_PERF`). Budget is ≤ 14 while swiping (12 instanced defs in the Christmas
+worst case + background + blade trail); an idle field is much lower. Read it
+after a busy round, not at boot.
 
 ### In-browser, desktop
 
@@ -139,6 +165,7 @@ pnpm verify:swipe        # buffer, gate, Input
 pnpm verify:cut          # hit test, slicer, score, debris
 pnpm verify:rules        # round, reset, spawn ramp
 pnpm verify:content      # themes, bake, import-graph isolation
+pnpm verify:perf         # instanced views, draw-call ceiling, allocation guard
 pnpm exec tsc --noEmit && pnpm exec oxfmt --check && pnpm exec oxlint && pnpm build
 ls dist/assets | grep -E 'draco|basis|ktx2' # expect no output
 ```

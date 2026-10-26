@@ -6,8 +6,9 @@ Plan for [PLAN.md](../PLAN.md) §8. Extends it, doesn't replace it.
   into a handful of instanced draws, then prove the steady frame allocates
   nothing and stays inside the frame budget.
 - Target: identical gameplay and visuals on both themes; `renderer.info` draw
-  calls ≤ 12 worst case (down from a 128-mesh ceiling); no per-frame
-  allocation; 60 FPS on a mid-range phone, WebGPU and WebGL2.
+  calls ≤ 14 while swiping (12 instanced worst case + background + blade
+  trail, down from a 128-mesh ceiling); no per-frame allocation; 60 FPS on a
+  mid-range phone, WebGPU and WebGL2.
 - Not in step 8: content/asset work (step 9), juice/HUD polish (step 9),
   runtime theme swap (step 10), spawn weighting, LOD, frustum-culling
   machinery beyond what instancing needs.
@@ -15,10 +16,12 @@ Plan for [PLAN.md](../PLAN.md) §8. Extends it, doesn't replace it.
 Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
 Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
 
-> **Status note.** The pools already exist (step 3) and geometry is already
-> one baked mesh per def (step 7). This step changes only **how slots become
-> draws**: `Mesh` per slot → `InstancedMesh` per def. Gameplay, spawner, cut
-> and HUD are untouched.
+> **Status — complete 2026-10-25.** A `b604f1e`, B `6549c87`, C `e3f19df`,
+> D in the close-out commit; plus an unplanned mobile-input fix `93c1806`.
+> Pools already existed (step 3) and geometry was already one baked mesh per
+> def (step 7), so the change is **how slots become draws**: `Mesh` per slot →
+> `InstancedMesh` per def. Rules, spawner, cut, debris ring and HUD are
+> unchanged; the sim/view loops were retuned for allocation only (B).
 
 ## Session start (before workstream A)
 
@@ -50,39 +53,45 @@ Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
    each frame has to reuse scratch objects; a `Map` or array built per frame
    would trade draw calls for GC pauses on a phone.
 
-## Decisions (locked 2026-10-25, [You])
+## Decisions (step 8, locked 2026-10-25, [You])
 
-| #   | Decision      | Choice                                                                                                                                                                                                  | Rationale                                                                                                         |
-| --- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| A   | Instance unit | One `InstancedMesh` **per defId** (objects) and per **(defId, pieceIndex)** (debris). Material = `materials[def.category]`.                                                                             | Geometry is baked per def; per-category draws would need merged shapes. Def-level draws are the honest ceiling.   |
-| B   | Capacity      | Objects: `POOL_SIZE` instances per def. Debris: `CUT.capacity` per mesh.                                                                                                                                | Spawner picks defs uniformly, so every slot _can_ be one def; a single def+piece can fill the whole debris ring.  |
-| C   | Sync          | Group active slots by defId per render (insertion order), write `setMatrixAt` with a reused `Object3D` dummy, set `.count`, `instanceMatrix.needsUpdate`, `DynamicDrawUsage`. Hidden def → `count = 0`. | No slot-stable mapping needed: nothing reads an instance index back. No allocation, no per-instance attributes.   |
-| D   | Culling       | `frustumCulled = false` on every instanced mesh.                                                                                                                                                        | Instances span the playfield, so whole-mesh culling is meaningless; triangles are 80–504 per def. Raycast unused. |
-| E   | Scene graph   | Children = defs (objects) + 2 × defs (debris). Nothing per pool slot.                                                                                                                                   | The load-bearing regression invariant: `POOL_SIZE` stops costing draws or nodes.                                  |
-| F   | Garbage       | Zero allocation in the steady frame; module-level scratch only. Audit every per-frame path, not just the views.                                                                                         | PLAN §8 "avoid per-frame garbage"; GC pauses are the phone failure mode.                                          |
-| G   | Verification  | `scripts/verify-perf.ts` + `pnpm verify:perf`: construction contract, sync contract, scene-graph size, static no-allocation guard on the two view modules. Headless, bun, no GPU.                       | Same harness style as steps 3–7; catches regressions `vite build` cannot.                                         |
-| H   | Measurement   | Dev-only (`DEBUG_PERF`) once-per-second log of `renderer.info.render.calls/triangles`; stats.js stays dev-only. No HUD change.                                                                          | Cheap readout for [You]'s trace; production pays nothing.                                                         |
-| I   | Already done  | No new work: object pools, pixel-ratio cap (`MAX_PIXEL_RATIO = 2`), pause on hidden (`GameLoop` → `document.hidden`), low-poly models, TSL materials, no shadow maps, no textures/atlases.              | PLAN §8 items that landed in earlier steps; verify, don't rebuild.                                                |
-| J   | Dependencies  | None. `InstancedMesh` ships in `three/webgpu`. Payload delta is code only (≤ ~0.5 kB gzip); check `dist/assets` for draco/basis.                                                                        | PAYLOAD guard rails.                                                                                              |
+| #   | Decision      | Choice                                                                                                                                                                                                                                         | Rationale                                                                                                         |
+| --- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| A   | Instance unit | One `InstancedMesh` **per defId** (objects) and per **(defId, pieceIndex)** (debris). Material = `materials[def.category]`.                                                                                                                    | Geometry is baked per def; per-category draws would need merged shapes. Def-level draws are the honest ceiling.   |
+| B   | Capacity      | Objects: `POOL_SIZE` instances per def. Debris: `CUT.capacity` per mesh.                                                                                                                                                                       | Spawner picks defs uniformly, so every slot _can_ be one def; a single def+piece can fill the whole debris ring.  |
+| C   | Sync          | Group active slots by defId per render (insertion order), write `setMatrixAt` with a reused `Object3D` dummy, set `.count`, `instanceMatrix.needsUpdate`, `DynamicDrawUsage`. Hidden def → `count = 0`.                                        | No slot-stable mapping needed: nothing reads an instance index back. No allocation, no per-instance attributes.   |
+| D   | Culling       | `frustumCulled = false` on every instanced mesh.                                                                                                                                                                                               | Instances span the playfield, so whole-mesh culling is meaningless; triangles are 80–504 per def. Raycast unused. |
+| E   | Scene graph   | Children = defs (objects) + 2 × defs (debris). Nothing per pool slot.                                                                                                                                                                          | The load-bearing regression invariant: `POOL_SIZE` stops costing draws or nodes.                                  |
+| F   | Garbage       | Zero allocation in the steady frame; module-level scratch only. Audit every per-frame path, not just the views.                                                                                                                                | PLAN §8 "avoid per-frame garbage"; GC pauses are the phone failure mode.                                          |
+| G   | Verification  | `scripts/verify-perf.ts` + `pnpm verify:perf` (54 checks): construction contract, sync contract (incl. upload-version bumps), scene-graph size, debris routing, materials, static allocation guard over six hot bodies. Headless, bun, no GPU. | Same harness style as steps 3–7; catches regressions `vite build` cannot.                                         |
+| H   | Measurement   | Dev-only (`DEBUG_PERF`) once-per-second log of `renderer.info.render.calls/triangles`; stats.js stays dev-only. No HUD change.                                                                                                                 | Cheap readout for [You]'s trace; production pays nothing.                                                         |
+| I   | Already done  | No new work: object pools, pixel-ratio cap (`MAX_PIXEL_RATIO = 2`), pause on hidden (`GameLoop` → `document.hidden`), low-poly models, TSL materials, no shadow maps, no textures/atlases.                                                     | PLAN §8 items that landed in earlier steps; verify, don't rebuild.                                                |
+| J   | Dependencies  | None. `InstancedMesh` ships in `three/webgpu`. Payload delta is code only (≤ ~0.5 kB gzip); check `dist/assets` for draco/basis.                                                                                                               | PAYLOAD guard rails.                                                                                              |
 
 ## Files touched
 
 ```
 src/rendering/ObjectViews.ts      per-def InstancedMesh; grouping sync            [I]
 src/rendering/DebrisViews.ts      per-def×piece InstancedMesh; grouping sync       [I]
+src/rendering/BladeTrail.ts       preallocated point ring, no clone/shift          [I]
 src/rendering/Materials.ts        unchanged (materials shared per category)        —
-src/config.ts                     DEBUG_PERF flag (+ INSTANCE budget comments)     [I] scaffold, [You] numbers
-src/main.ts                       dev-only draw-call readout in the render hook    [I]
-scripts/verify-perf.ts            new harness                                      [I]
+src/game/Physics.ts               indexed pool.items + active, no per-step closure [I]
+src/game/Slicer.ts                indexed pool.items + active, no per-segment closure [I]
+src/game/Input.ts                 reused SwipeSegment; coalesced-events guard; cancelStroke [I]
+src/game/Pool.ts                  iteration contract docs (items per frame, each one-shot) [I]
+src/config.ts                     DEBUG_PERF flag                                  [I]
+src/main.ts                       dev draw-call readout; visibilitychange → cancelStroke [I]
+scripts/verify-perf.ts            new harness, 54 checks                           [I]
+scripts/verify-swipe.ts           47 checks (coalesced fallback + cancelStroke)    [I]
 package.json                      verify:perf script                               [I]
 docs/PLAN-STEP-8-perf.md          this file                                        [I]
 AGENTS.md / CHANGELOG.md / README.md  state + commands + link                       [I]
 docs/PERF-BUDGET.md               draw-call + instance-memory budgets              [I]
 ```
 
-`src/game/**`, `src/content/**`, `Spawner`, `Pool`, `Debris`, `Slicer`,
-`Round`, `ui/hud.ts` and the verifiers stay untouched. If one needs a change,
-the instancing seam leaked — stop and fix the view layer.
+`src/content/**`, `Spawner`, `Debris`, `Round`, `Score`, `ui/hud.ts` and the
+step 1–7 verifiers stay untouched. Gameplay edits were confined to loop
+iteration and input plumbing (workstream B) — no rule or behaviour changed.
 
 ---
 
@@ -123,9 +132,10 @@ false`, `instanceMatrix.setUsage(DynamicDrawUsage)`.
 ### Success signal
 
 Both themes look and play exactly as in step 7. `renderer.info.render.calls`
-during a busy round drops from the current per-slot count to ≤ 12 (Christmas:
-4 object meshes + 8 debris meshes; Halloween 9). Scene children count is 9/12.
-Cut debris still tumbles with the right half/scale per def.
+during a busy round drops from the current per-slot count to ≤ 14 while
+swiping (Christmas: 4 object + 8 debris instanced draws, plus background and
+blade trail; Halloween 11). Scene children count is 9/12. Cut debris still
+tumbles with the right half/scale per def.
 
 ### Notes
 
@@ -206,9 +216,10 @@ involved.
     per-def `count`, matrix elements equal the composed transform, inactive and
     unknown slots contribute nothing, a second sync after emptying resets
     every `count` to 0, and `needsUpdate` is set only when `count > 0`.
-  - **Allocation guard (~2):** read the two view modules and assert no
-    `new `, `.map(`, `.filter(`, `.slice(`, `Array.from` or `.clone(` in the
-    sync functions (the pattern the step-7 isolation check established).
+  - **Allocation guard (~6):** read the hot bodies (`syncViews`,
+    `syncDebrisViews`, `Physics.step`, `Slicer.cut`, `Input.#emit`,
+    `BladeTrail.add`) and assert no `new `, `.clone(`, `.map(`, `.filter(`,
+    `.slice(`, `.concat(`, `Array.from`, `Object.assign` or object spread.
   - **Materials (~1):** both categories still share one material instance
     across objects and debris.
 
@@ -245,15 +256,16 @@ full chain green; precache delta code-only.
 - [I] `config.ts` `DEBUG_PERF` + `main.ts` render hook: in dev, log
   `renderer.info.render.calls/triangles` once per second (no HUD, no DOM
   churn). Off in production builds.
-- [I] `PERF-BUDGET.md`: draw-call budget (≤ 12 worst case, 9 Halloween, and
-  the "scene graph is theme-sized, not pool-sized" invariant), instance
-  memory (~48 KiB), measurement recipe (`renderer.info`, Chrome trace, GC
-  trace), and the note that textures/atlases remain N/A (no textures).
+- [I] `PERF-BUDGET.md`: draw-call budget (≤ 14 while swiping, 12 instanced
+  worst case, 9 Halloween, plus the "scene graph is theme-sized, not
+  pool-sized" invariant), instance memory (~48 KiB), measurement recipe
+  (`renderer.info`, Chrome trace, GC trace), and the note that
+  textures/atlases remain N/A (no textures).
 - [I] `AGENTS.md` (state → step 8 complete, decisions A–J, commands, next step
   9), `CHANGELOG.md` (A–D + measured deltas), `README.md` plan link +
   `verify:perf`.
 - [You] Device pass: repeat the baseline trace on the same phone — draw calls
-  ≤ 12, frame time still ≤ 16.67 ms, no GC sawtooth, both WebGPU and WebGL2,
+  ≤ 14, frame time still ≤ 16.67 ms, no GC sawtooth, both WebGPU and WebGL2,
   both themes, portrait.
 
 ### Success signal
