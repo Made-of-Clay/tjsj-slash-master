@@ -43,10 +43,10 @@ export class Pool<T> {
     }
 
     /**
-     * Read-only construction-order view of every slot, used or free. For
-     * one-time setup binding (workstream B binds a view mesh per slot) and
-     * per-frame view sync keyed on `SpawnedObject.active`. Sim iteration must
-     * use `each()` — only checked-out items have live state.
+     * Read-only construction-order view of every slot, used or free.
+     * `SpawnedObject.active` mirrors checkout, so per-frame code (sim and
+     * views) iterates this by index and skips inactive slots — no iterator,
+     * no callback. `each()` stays for one-shot passes.
      */
     get items(): readonly T[] {
         return this.#items;
@@ -80,7 +80,7 @@ export class Pool<T> {
         });
     }
 
-    /** Iterate only the checked-out items. Allocation-free. */
+    /** Visit only checked-out items. Allocates one closure per call — not for per-frame use. */
     each(visit: (item: T) => void): void {
         for (let index = 0; index < this.size; index += 1) {
             if (this.#state[index] === IN_USE) {

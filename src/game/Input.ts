@@ -51,6 +51,8 @@ export class Input {
     #current = new Vector2();
     #from = new Vector3();
     #to = new Vector3();
+    /** Reused wrapper over `#from`/`#to`; handlers must copy what they keep. */
+    #segment: SwipeSegment = { from: this.#from, to: this.#to };
 
     constructor(target: HTMLElement, project: Projector) {
         this.#target = target;
@@ -170,10 +172,8 @@ export class Input {
 
         if (this.#handlers.length === 0) return;
 
-        // Single reused segment: no garbage per segment.
-        const segment: SwipeSegment = { from: this.#from, to: this.#to };
         for (const handler of this.#handlers) {
-            handler(segment);
+            handler(this.#segment);
         }
     }
 

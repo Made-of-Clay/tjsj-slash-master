@@ -23,8 +23,14 @@ export class Physics {
         // if the bounds are ever re-derived for another reason.
         const bottom = bounds.centerY - bounds.halfHeight;
         const halfWidth = bounds.halfWidth;
+        const items = pool.items;
 
-        pool.each((object) => {
+        // Indexed over `items` + `active` (the checkout mirror): no per-step
+        // callback closure, which `each()` would allocate.
+        for (let index = 0; index < items.length; index += 1) {
+            const object = items[index];
+            if (!object.active) continue;
+
             // Integration order per PLAN.md §3: position first, then gravity.
             object.position.x += object.velocity.x * dt;
             object.position.y += object.velocity.y * dt;
@@ -39,7 +45,7 @@ export class Physics {
             // until step 6; the slot is simply recycled.
             if (object.position.y < bottom - object.radius && object.velocity.y < 0) {
                 pool.release(object);
-                return;
+                continue;
             }
 
             // Outside the field sideways while still moving outward. Side
@@ -52,6 +58,6 @@ export class Physics {
             ) {
                 pool.release(object);
             }
-        });
+        }
     }
 }

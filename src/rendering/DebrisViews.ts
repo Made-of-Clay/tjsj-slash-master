@@ -13,6 +13,8 @@ import { bakeModel } from './Model';
 export interface DebrisViews {
     /** defId → [piece 0, piece 1] instanced meshes. */
     readonly instanced: Map<string, readonly [InstancedMesh, InstancedMesh]>;
+    /** The same meshes, flattened, for allocation-free per-frame iteration. */
+    readonly meshes: readonly InstancedMesh[];
     /** Shared per-category materials (ObjectViews owns them). */
     readonly materials: Record<ObjectCategory, MeshStandardMaterial>;
 }
@@ -67,20 +69,24 @@ export function createDebrisViews(
         ]);
     }
 
-    return { instanced, materials };
+    const meshes: InstancedMesh[] = [];
+    for (const pair of instanced.values()) {
+        meshes.push(pair[0], pair[1]);
+    }
+
+    return { instanced, meshes, materials };
 }
 
 /** Copies live piece state into per-def, per-piece instance slots. */
 export function syncDebrisViews(views: DebrisViews, pieces: readonly DebrisPiece[]): void {
-    const { instanced } = views;
+    const { instanced, meshes } = views;
 
-    for (const pair of instanced.values()) {
-        for (const mesh of pair) {
-            mesh.count = 0;
-        }
+    for (let index = 0; index < meshes.length; index += 1) {
+        meshes[index].count = 0;
     }
 
-    for (const piece of pieces) {
+    for (let index = 0; index < pieces.length; index += 1) {
+        const piece = pieces[index];
         if (!piece.active) continue;
 
         const mesh = instanced.get(piece.defId)?.[piece.pieceIndex];
@@ -93,11 +99,10 @@ export function syncDebrisViews(views: DebrisViews, pieces: readonly DebrisPiece
         mesh.count += 1;
     }
 
-    for (const pair of instanced.values()) {
-        for (const mesh of pair) {
-            if (mesh.count > 0) {
-                mesh.instanceMatrix.needsUpdate = true;
-            }
+    for (let index = 0; index < meshes.length; index += 1) {
+        const mesh = meshes[index];
+        if (mesh.count > 0) {
+            mesh.instanceMatrix.needsUpdate = true;
         }
     }
 }

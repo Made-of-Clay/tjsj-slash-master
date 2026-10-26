@@ -163,7 +163,7 @@ async function boot(): Promise<void> {
 
     const input = new Input(canvas, createSwipeProjector(camera));
 
-    const bladeTrail = createBladeTrail(scene, camera, 32);
+    const bladeTrail = createBladeTrail(scene, 32);
     input.onStrokeStart((w) => bladeTrail.start(w));
     input.onStrokeMove((w) => bladeTrail.add(w));
     input.onStrokeEnd(() => bladeTrail.end());

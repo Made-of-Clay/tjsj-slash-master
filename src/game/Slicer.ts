@@ -74,9 +74,15 @@ export class Slicer {
         }
 
         let cutCount = 0;
-        pool.each((object) => {
+        const items = pool.items;
+
+        // Indexed over `items` + `active`: no per-segment callback closure.
+        for (let index = 0; index < items.length; index += 1) {
+            const object = items[index];
+            if (!object.active) continue;
+
             if (!segmentSphere(segment.from, segment.to, object.position, object.radius, CUT.pad)) {
-                return;
+                continue;
             }
 
             this.#score.add(object.score);
@@ -84,7 +90,7 @@ export class Slicer {
             this.#onCut?.(object.defId, object.score);
             pool.release(object);
             cutCount += 1;
-        });
+        }
 
         this.#cuts += cutCount;
         return cutCount;

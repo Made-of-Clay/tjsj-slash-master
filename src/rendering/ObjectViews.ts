@@ -13,6 +13,8 @@ import { bakeModel } from './Model';
 export interface ObjectViews {
     /** defId → instanced mesh; one draw call per def in flight. */
     readonly instanced: Map<string, InstancedMesh>;
+    /** The same meshes, for allocation-free per-frame iteration. */
+    readonly meshes: readonly InstancedMesh[];
     /** One shared material per category, tinted from theme accents. */
     readonly materials: Record<ObjectCategory, MeshStandardMaterial>;
 }
@@ -44,18 +46,19 @@ export function createObjectViews(
         instanced.set(def.id, mesh);
     }
 
-    return { instanced, materials };
+    return { instanced, meshes: [...instanced.values()], materials };
 }
 
 /** Copies live state into per-def instance slots; presentation only. */
 export function syncViews(views: ObjectViews, objects: readonly SpawnedObject[]): void {
-    const { instanced } = views;
+    const { instanced, meshes } = views;
 
-    for (const mesh of instanced.values()) {
-        mesh.count = 0;
+    for (let index = 0; index < meshes.length; index += 1) {
+        meshes[index].count = 0;
     }
 
-    for (const object of objects) {
+    for (let index = 0; index < objects.length; index += 1) {
+        const object = objects[index];
         if (!object.active) continue;
 
         const mesh = instanced.get(object.defId);
@@ -68,7 +71,8 @@ export function syncViews(views: ObjectViews, objects: readonly SpawnedObject[])
         mesh.count += 1;
     }
 
-    for (const mesh of instanced.values()) {
+    for (let index = 0; index < meshes.length; index += 1) {
+        const mesh = meshes[index];
         if (mesh.count > 0) {
             mesh.instanceMatrix.needsUpdate = true;
         }
