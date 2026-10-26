@@ -11,6 +11,7 @@ import './style.css';
 import {
     CUT,
     DEBUG_CUT,
+    EFFECTS,
     DEBUG_PERF,
     DEBUG_PLAYFIELD,
     DEBUG_SWIPE,
@@ -18,6 +19,7 @@ import {
     MAX_PIXEL_RATIO,
     POOL_SIZE,
     ROUND,
+    SHAKE,
     SWIPE,
     TONE_MAPPING,
     TONE_MAPPING_EXPOSURE,
@@ -36,6 +38,7 @@ import { Swipes } from './game/Swipes';
 import { Slicer } from './game/Slicer';
 import { Score } from './game/Score';
 import { boxBoundingRadius, createSpawnedObject, resetSpawnedObject } from './game/SpawnedObject';
+import type { SpawnedObject } from './game/SpawnedObject';
 import {
     createCamera,
     createPlayField,
@@ -47,6 +50,9 @@ import { createObjectViews, syncViews } from './rendering/ObjectViews';
 import { createDebrisViews, syncDebrisViews } from './rendering/DebrisViews';
 import { createScene } from './rendering/Scene';
 import { createBladeTrail } from './rendering/BladeTrail';
+import { createSparkViews, syncSparkViews } from './rendering/SparkViews';
+import { createShake } from './rendering/Shake';
+import { Effects } from './game/Effects';
 import { createHud } from './ui/hud';
 import { createUiRoot } from './ui/root';
 
@@ -154,6 +160,12 @@ async function boot(): Promise<void> {
         objectViews.materials,
     );
 
+    // Step 9A: cut feedback. Sparks are a fixed ring (presentation only); the
+    // shake base pose is captured here, before any offset is applied.
+    const effects = new Effects(EFFECTS.capacity);
+    const sparkViews = createSparkViews(scene, EFFECTS.capacity, theme.accents);
+    const shake = createShake(camera);
+
     // Bounds change with aspect, so the outline is redrawn on every reframe.
     const syncViewport = createViewportSync(renderer, playfield, (bounds) => {
         if (debugRect) writeDebugRect(debugRect, bounds);
@@ -183,9 +195,18 @@ async function boot(): Promise<void> {
     // anything — so the hit test and the pieces' inherited velocity both see
     // pre-move state (Decision 4C).
     const score = new Score();
+
+    // Step 9A: every cut answers with pieces, sparks and a shake kick — all
+    // read from the parent before `pool.release` zeroes it (step 5E).
+    function cutFeedback(parent: SpawnedObject, nx: number, ny: number): void {
+        debris.spawn(parent, nx, ny);
+        effects.burst(parent.position.x, parent.position.y, parent.radius, nx, ny, parent.category);
+        shake.add(parent.category === 'restricted' ? SHAKE.hitTrauma : SHAKE.cutTrauma);
+    }
+
     const slicer = new Slicer({
         score,
-        pieces: (parent, nx, ny) => debris.spawn(parent, nx, ny),
+        pieces: cutFeedback,
         onCut: DEBUG_CUT ? logCut : undefined,
     });
 
@@ -249,6 +270,8 @@ async function boot(): Promise<void> {
         spawner.reset();
         objects.releaseAll();
         debris.clear();
+        effects.clear();
+        shake.reset();
         swipes.clear();
     }
 
@@ -268,6 +291,8 @@ async function boot(): Promise<void> {
             // Step 5B: pieces tumble after the sim that spawned them; the
             // launch line doubles as their floor (Physics despawn semantics).
             debris.step(dt, LAUNCH_LINE_Y);
+            effects.step(dt);
+            shake.step(dt);
             // Clock last: the step that crosses the buzzer completes fully,
             // every later step is frozen (step 6 Decision B).
             round.step(dt);
@@ -275,8 +300,12 @@ async function boot(): Promise<void> {
         render: () => {
             stats?.begin();
             syncViewport();
+            // After the reframe: the shake offset is reapplied from the base
+            // pose every frame, never accumulated into camera state.
+            shake.apply();
             syncViews(objectViews, objects.items);
             syncDebrisViews(debrisViews, debris.pieces);
+            syncSparkViews(sparkViews, effects.sparks);
             // HUD reads latest state (never steps); both calls no-op when
             // nothing changed, so the steady frame does no DOM work.
             hud.sync(score.total, round.secondsLeft);

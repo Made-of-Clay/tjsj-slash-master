@@ -26,6 +26,7 @@ function check(name: string, condition: boolean, detail = ''): void {
 import { readFileSync } from 'node:fs';
 import {
     DynamicDrawUsage,
+    PerspectiveCamera,
     Euler,
     InstancedMesh,
     Matrix4,
@@ -33,12 +34,15 @@ import {
     Scene,
     Vector3,
 } from 'three/webgpu';
-import { CUT, POOL_SIZE } from '../src/config.ts';
+import { CUT, EFFECTS, POOL_SIZE, SHAKE } from '../src/config.ts';
 import type { Theme } from '../src/content/types.ts';
 import { christmas } from '../src/content/themes/christmas.ts';
 import { halloween } from '../src/content/themes/halloween.ts';
 import { createObjectViews, syncViews } from '../src/rendering/ObjectViews.ts';
 import { createDebrisViews, syncDebrisViews } from '../src/rendering/DebrisViews.ts';
+import { createSparkViews, syncSparkViews } from '../src/rendering/SparkViews.ts';
+import { createShake } from '../src/rendering/Shake.ts';
+import { Effects } from '../src/game/Effects.ts';
 import type { SpawnedObject } from '../src/game/SpawnedObject.ts';
 import type { DebrisPiece } from '../src/game/Debris.ts';
 
@@ -298,6 +302,131 @@ for (const theme of THEMES) {
     );
 }
 
+// ===== cut sparks =====
+console.log('Cut sparks');
+
+function seed(values: readonly number[]): () => number {
+    let index = 0;
+    return () => {
+        const value = values[index % values.length];
+        index += 1;
+        return value;
+    };
+}
+
+for (const theme of THEMES) {
+    const scene = new Scene();
+    const views = createSparkViews(scene, EFFECTS.capacity, theme.accents);
+    const categories = Object.keys(theme.accents).length;
+
+    check(
+        `[${theme.id}] one spark mesh per category`,
+        views.meshes.length === categories && scene.children.length === categories,
+        `${views.meshes.length} meshes, ${scene.children.length} children`,
+    );
+    check(
+        `[${theme.id}] spark meshes are capacity-sized, dynamic and unculled`,
+        views.meshes.every(
+            (mesh) =>
+                mesh.instanceMatrix.count === EFFECTS.capacity &&
+                mesh.instanceMatrix.usage === DynamicDrawUsage &&
+                mesh.frustumCulled === false &&
+                mesh.count === 0,
+        ),
+    );
+
+    const effects = new Effects(64, seed([0.5, 0.25, 0.75]));
+    const target = views.instanced.get('target')!;
+    const restricted = views.instanced.get('restricted')!;
+
+    effects.burst(0, 0, 0.5, 1, 0, 'target');
+    syncSparkViews(views, effects.sparks);
+    check(
+        `[${theme.id}] a burst draws only its category`,
+        target.count === EFFECTS.perCut && restricted.count === 0,
+        `${target.count}, ${restricted.count}`,
+    );
+
+    const position = target.geometry.getAttribute('position');
+    let maxRadius = 0;
+    for (let index = 0; index < position.count; index += 1) {
+        maxRadius = Math.max(
+            maxRadius,
+            Math.hypot(position.getX(index), position.getY(index), position.getZ(index)),
+        );
+    }
+    check(
+        `[${theme.id}] spark geometry is a unit shard (instance scale = world size)`,
+        Math.abs(maxRadius - 1) < 1e-6,
+        `radius=${maxRadius}`,
+    );
+
+    const first = effects.sparks[0];
+    const scaleAtSpawn = matrixAt(target, 0)[0];
+    check(
+        `[${theme.id}] spark instance 0 carries position and spawn scale`,
+        Math.abs(matrixAt(target, 0)[12] - first.position.x) < EPSILON &&
+            Math.abs(matrixAt(target, 0)[13] - first.position.y) < EPSILON &&
+            Math.abs(scaleAtSpawn - first.size) < EPSILON,
+        `${matrixAt(target, 0)[12]}, ${matrixAt(target, 0)[13]}, ${scaleAtSpawn}`,
+    );
+
+    effects.step(EFFECTS.life * 0.5);
+    syncSparkViews(views, effects.sparks);
+    check(
+        `[${theme.id}] sparks shrink over their life`,
+        Math.abs(matrixAt(target, 0)[0] - scaleAtSpawn) > 1e-4 && target.count === EFFECTS.perCut,
+    );
+
+    effects.step(EFFECTS.life);
+    syncSparkViews(views, effects.sparks);
+    check(
+        `[${theme.id}] sparks despawn at life and draw nothing`,
+        views.meshes.every((mesh) => mesh.count === 0),
+    );
+
+    const tiny = new Effects(3, seed([0.5]));
+    tiny.burst(0, 0, 0.5, 1, 0, 'restricted');
+    check(
+        `[${theme.id}] the spark ring drops oldest on overflow`,
+        tiny.sparks.filter((spark) => spark.active).length === 3,
+    );
+}
+
+// ===== shake =====
+console.log('Screen shake');
+{
+    const camera = new PerspectiveCamera();
+    const base = camera.position.clone();
+    const shake = createShake(camera);
+
+    shake.add(2);
+    check('trauma clamps at 1', shake.trauma === 1, `${shake.trauma}`);
+
+    shake.step(0.1);
+    check('trauma decays', Math.abs(shake.trauma - (1 - SHAKE.decay * 0.1)) < EPSILON);
+
+    shake.apply();
+    const moved = camera.position.distanceTo(base);
+    check(
+        'apply offsets the camera, within the amplitude bound',
+        moved > 0 && moved <= SHAKE.amplitude * Math.sqrt(2) + EPSILON,
+        `${moved}`,
+    );
+    check('apply rolls the camera', Math.abs(camera.rotation.z) <= SHAKE.roll);
+
+    shake.step(10);
+    shake.apply();
+    check(
+        'decay returns to the captured base pose',
+        shake.trauma === 0 && camera.position.distanceTo(base) < EPSILON && camera.rotation.z === 0,
+    );
+
+    shake.add(0.5);
+    shake.reset();
+    check('reset drops trauma and restores the base pose', shake.trauma === 0);
+}
+
 // ===== allocation guard =====
 console.log('Allocation guard');
 
@@ -339,6 +468,9 @@ const GUARDED: ReadonlyArray<readonly [string, string]> = [
     ['game/Slicer.ts', 'cut(pool'],
     ['game/Input.ts', '#emit(event'],
     ['rendering/BladeTrail.ts', 'function add(world'],
+    ['game/Effects.ts', 'step(dt'],
+    ['rendering/SparkViews.ts', 'export function syncSparkViews'],
+    ['rendering/Shake.ts', 'function apply()'],
 ];
 
 for (const [file, signature] of GUARDED) {

@@ -169,6 +169,44 @@ export const LIGHTING = {
     rim: 1.2,
 } as const;
 
+// ===== EFFECTS =====
+// Cut feedback (step 9A). Sparks are presentation only: a fixed ring of unlit
+// shards, drawn as one instanced mesh per category. Numbers are scaffolded for
+// [You] to tune by eye.
+export const EFFECTS = {
+    /** Spark slots; the oldest is recycled on overflow. */
+    capacity: 128,
+    /** Sparks emitted per cut. */
+    perCut: 7,
+    /** Spark lifetime, seconds (per-spark jitter applied). */
+    life: 0.45,
+    /** Burst speed along the slice normal, world units/s. */
+    speed: 3.2,
+    /** Sideways scatter, as a fraction of `speed`. */
+    spread: 0.9,
+    /** Shard radius in world units (unit geometry, instance scale = size). */
+    size: 0.09,
+    /** Downward pull on sparks, world units/s² (lighter than objects). */
+    gravity: 5,
+    /** Velocity damping, 1/s. */
+    damping: 1.6,
+} as const;
+
+// Screen shake (step 9A). Trauma is 0..1 with quadratic falloff, applied as a
+// camera offset — never a camera state mutation (see rendering/Shake.ts).
+export const SHAKE = {
+    /** Trauma added per target cut. */
+    cutTrauma: 0.22,
+    /** Trauma added per restricted cut. */
+    hitTrauma: 0.6,
+    /** Trauma lost per second. */
+    decay: 2.4,
+    /** Peak translation offset, world units. */
+    amplitude: 0.22,
+    /** Peak roll, radians. */
+    roll: 0.012,
+} as const;
+
 // ===== DEBUG =====
 // Bounds rectangle and other playfield debug. Vite folds this to `false` in the
 // production build, so the debug geometry is dropped from the bundle.
