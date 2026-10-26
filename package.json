@@ -19,7 +19,8 @@
     "verify:swipe": "bun scripts/verify-swipe.ts",
     "verify:cut": "bun scripts/verify-cut.ts",
     "verify:rules": "bun scripts/verify-rules.ts",
-    "verify:content": "bun scripts/verify-content.ts"
+    "verify:content": "bun scripts/verify-content.ts",
+    "verify:perf": "bun scripts/verify-perf.ts"
   },
   "dependencies": {
     "stats.js": "^0.17.0",

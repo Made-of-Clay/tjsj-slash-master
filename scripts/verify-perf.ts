@@ -1,0 +1,360 @@
+/*
+ * Performance checks for step 8.
+ *
+ *   bun scripts/verify-perf.ts
+ *
+ * Plain assertions over the instanced view layer and the steady-frame
+ * allocation contract. No GPU and no frame timer here: draw calls and frame
+ * time are measured on device (Chrome trace + stats.js). What this harness can
+ * prove is the part a build cannot see — that the scene graph is theme-sized
+ * rather than pool-sized, that slot state lands in the right instance, and
+ * that the hot functions never construct anything.
+ */
+
+let failures = 0;
+let total = 0;
+function check(name: string, condition: boolean, detail = ''): void {
+    total += 1;
+    if (condition) {
+        console.log(`  ok    ${name}`);
+    } else {
+        failures += 1;
+        console.log(`  FAIL  ${name}${detail ? ` — ${detail}` : ''}`);
+    }
+}
+
+import { readFileSync } from 'node:fs';
+import {
+    DynamicDrawUsage,
+    Euler,
+    InstancedMesh,
+    Matrix4,
+    Quaternion,
+    Scene,
+    Vector3,
+} from 'three/webgpu';
+import { CUT, POOL_SIZE } from '../src/config.ts';
+import type { Theme } from '../src/content/types.ts';
+import { christmas } from '../src/content/themes/christmas.ts';
+import { halloween } from '../src/content/themes/halloween.ts';
+import { createObjectViews, syncViews } from '../src/rendering/ObjectViews.ts';
+import { createDebrisViews, syncDebrisViews } from '../src/rendering/DebrisViews.ts';
+import type { SpawnedObject } from '../src/game/SpawnedObject.ts';
+import type { DebrisPiece } from '../src/game/Debris.ts';
+
+const THEMES: readonly Theme[] = [halloween, christmas];
+const EPSILON = 1e-6;
+const ONE = new Vector3(1, 1, 1);
+
+function fakeObject(
+    defId: string,
+    x: number,
+    y: number,
+    z: number,
+    rotationZ: number,
+    active = true,
+): SpawnedObject {
+    return {
+        active,
+        defId,
+        position: new Vector3(x, y, z),
+        rotation: new Euler(0, 0, rotationZ),
+    } as SpawnedObject;
+}
+
+function fakePiece(
+    defId: string,
+    pieceIndex: number,
+    x: number,
+    y: number,
+    z: number,
+    active = true,
+): DebrisPiece {
+    return {
+        active,
+        defId,
+        pieceIndex,
+        position: new Vector3(x, y, z),
+        rotation: new Euler(0, 0, 0.25),
+    } as DebrisPiece;
+}
+
+function composed(x: number, y: number, z: number, rotationZ: number): Matrix4 {
+    return new Matrix4().compose(
+        new Vector3(x, y, z),
+        new Quaternion().setFromEuler(new Euler(0, 0, rotationZ)),
+        ONE,
+    );
+}
+
+function matrixAt(mesh: InstancedMesh, index: number): number[] {
+    return Array.from(mesh.instanceMatrix.array.slice(index * 16, index * 16 + 16));
+}
+
+function matrixEquals(mesh: InstancedMesh, index: number, expected: Matrix4): boolean {
+    const actual = matrixAt(mesh, index);
+    return expected.elements.every((value, offset) => Math.abs(actual[offset] - value) < EPSILON);
+}
+
+function build(theme: Theme, capacity = POOL_SIZE) {
+    const scene = new Scene();
+    const views = createObjectViews(scene, capacity, theme.objects, theme.accents);
+    const debris = createDebrisViews(scene, CUT.capacity, theme.objects, views.materials);
+    return { scene, views, debris };
+}
+
+// ===== construction =====
+console.log('Construction');
+for (const theme of THEMES) {
+    const { scene, views, debris } = build(theme);
+
+    check(
+        `[${theme.id}] one instanced mesh per def`,
+        views.instanced.size === theme.objects.length,
+        `${views.instanced.size} != ${theme.objects.length}`,
+    );
+    check(
+        `[${theme.id}] scene graph is defs (objects) + 2 × defs (debris)`,
+        scene.children.length === theme.objects.length * 3,
+        `children=${scene.children.length}`,
+    );
+    check(
+        `[${theme.id}] every scene child is instanced (no per-slot meshes)`,
+        scene.children.every((child) => (child as InstancedMesh).isInstancedMesh === true),
+    );
+
+    let materialsMatch = true;
+    let capacitiesMatch = true;
+    let dynamic = true;
+    let uncullable = true;
+    let startsHidden = true;
+
+    for (const def of theme.objects) {
+        const mesh = views.instanced.get(def.id);
+        if (!mesh) {
+            materialsMatch = false;
+            continue;
+        }
+
+        materialsMatch &&= mesh.material === views.materials[def.category];
+        capacitiesMatch &&= mesh.instanceMatrix.count === POOL_SIZE;
+        dynamic &&= mesh.instanceMatrix.usage === DynamicDrawUsage;
+        uncullable &&= mesh.frustumCulled === false;
+        startsHidden &&= mesh.count === 0;
+
+        const pair = debris.instanced.get(def.id);
+        if (!pair) {
+            materialsMatch = false;
+            continue;
+        }
+        for (const pieceMesh of pair) {
+            materialsMatch &&= pieceMesh.material === views.materials[def.category];
+            capacitiesMatch &&= pieceMesh.instanceMatrix.count === CUT.capacity;
+            dynamic &&= pieceMesh.instanceMatrix.usage === DynamicDrawUsage;
+            uncullable &&= pieceMesh.frustumCulled === false;
+            startsHidden &&= pieceMesh.count === 0;
+        }
+    }
+
+    check(`[${theme.id}] meshes use the shared category materials`, materialsMatch);
+    check(`[${theme.id}] instance capacities match the pool and ring budgets`, capacitiesMatch);
+    check(`[${theme.id}] instance buffers are dynamic`, dynamic);
+    check(`[${theme.id}] frustum culling is off (instances span the field)`, uncullable);
+    check(`[${theme.id}] nothing draws before the first sync`, startsHidden);
+    check(
+        `[${theme.id}] debris shares the object layer's materials object`,
+        debris.materials === views.materials,
+    );
+
+    // POOL_SIZE is a rendering detail: shrinking capacity must not change the
+    // scene graph, only the instance buffers.
+    const smaller = build(theme, 2);
+    check(
+        `[${theme.id}] scene graph is independent of POOL_SIZE`,
+        smaller.scene.children.length === scene.children.length,
+        `${smaller.scene.children.length} != ${scene.children.length}`,
+    );
+    check(
+        `[${theme.id}] capacity is the requested instance count`,
+        smaller.views.meshes.every((mesh) => mesh.instanceMatrix.count === 2),
+    );
+}
+
+// ===== sync contract =====
+console.log('Sync contract');
+for (const theme of THEMES) {
+    const { views } = build(theme);
+    const [first, second] = theme.objects;
+
+    const a = fakeObject(first.id, 0.1, 0.2, 0.3, 0.5);
+    const b = fakeObject(second.id, -0.4, 0.6, 0.0, -0.25);
+    const aAgain = fakeObject(first.id, 0.7, -0.8, 0.9, 1.0);
+    const inactive = fakeObject(first.id, 9, 9, 9, 0, false);
+    const unknown = fakeObject('nope', 1, 1, 1, 0);
+
+    syncViews(views, [a, b, aAgain, inactive, unknown]);
+
+    const firstMesh = views.instanced.get(first.id)!;
+    const secondMesh = views.instanced.get(second.id)!;
+
+    check(
+        `[${theme.id}] active slots group per def`,
+        firstMesh.count === 2 && secondMesh.count === 1,
+        `${firstMesh.count}, ${secondMesh.count}`,
+    );
+    check(
+        `[${theme.id}] inactive and unknown defs contribute nothing`,
+        views.meshes
+            .filter((mesh) => mesh !== firstMesh && mesh !== secondMesh)
+            .every((mesh) => mesh.count === 0),
+    );
+    check(
+        `[${theme.id}] instance 0 carries the composed transform`,
+        matrixEquals(firstMesh, 0, composed(0.1, 0.2, 0.3, 0.5)),
+        matrixAt(firstMesh, 0)
+            .map((value) => value.toFixed(3))
+            .join(','),
+    );
+    check(
+        `[${theme.id}] the second instance of a def lands in instance 1`,
+        matrixEquals(firstMesh, 1, composed(0.7, -0.8, 0.9, 1.0)),
+    );
+    check(
+        `[${theme.id}] the other def gets its own instance 0`,
+        matrixEquals(secondMesh, 0, composed(-0.4, 0.6, 0, -0.25)),
+    );
+
+    const versionWithData = firstMesh.instanceMatrix.version;
+    syncViews(views, []);
+    check(
+        `[${theme.id}] an empty sync resets every count`,
+        views.meshes.every((mesh) => mesh.count === 0),
+    );
+    const versionAfterReset = firstMesh.instanceMatrix.version;
+    check(
+        `[${theme.id}] an empty sync uploads nothing`,
+        versionAfterReset === versionWithData,
+        `${versionAfterReset} != ${versionWithData}`,
+    );
+
+    // Need a fresh view set to re-check the version bump on a data sync.
+    const fresh = build(theme);
+    const before = fresh.views.instanced.get(first.id)!.instanceMatrix.version;
+    syncViews(fresh.views, [a]);
+    const after = fresh.views.instanced.get(first.id)!.instanceMatrix.version;
+    check(
+        `[${theme.id}] a data sync flags one upload per drawn def`,
+        after === before + 1,
+        `${after} != ${before + 1}`,
+    );
+
+    const capped = build(theme, 2);
+    syncViews(capped.views, [
+        fakeObject(first.id, 1, 1, 0, 0),
+        fakeObject(first.id, 2, 2, 0, 0),
+        fakeObject(first.id, 3, 3, 0, 0),
+    ]);
+    check(
+        `[${theme.id}] count is capped at capacity, not overflowed`,
+        capped.views.instanced.get(first.id)!.count === 2,
+    );
+}
+
+// ===== debris sync =====
+console.log('Debris sync');
+for (const theme of THEMES) {
+    const { debris } = build(theme);
+    const def = theme.objects[0];
+
+    syncDebrisViews(debris, [
+        fakePiece(def.id, 0, 0.1, 0.2, 0),
+        fakePiece(def.id, 1, -0.3, 0.4, 0),
+        fakePiece(def.id, 0, 1, 1, 0, false),
+        fakePiece('nope', 0, 2, 2, 0),
+    ]);
+
+    const pair = debris.instanced.get(def.id)!;
+    check(
+        `[${theme.id}] pieces route by def and piece index`,
+        pair[0].count === 1 && pair[1].count === 1,
+        `${pair[0].count}, ${pair[1].count}`,
+    );
+    check(
+        `[${theme.id}] each piece mesh gets its own transform`,
+        matrixEquals(pair[0], 0, composed(0.1, 0.2, 0, 0.25)) &&
+            matrixEquals(pair[1], 0, composed(-0.3, 0.4, 0, 0.25)),
+    );
+    check(
+        `[${theme.id}] other defs and inactive pieces are not drawn`,
+        debris.meshes
+            .filter((mesh) => mesh !== pair[0] && mesh !== pair[1])
+            .every((mesh) => mesh.count === 0),
+    );
+
+    syncDebrisViews(debris, []);
+    check(
+        `[${theme.id}] an empty debris sync resets every count`,
+        debris.meshes.every((mesh) => mesh.count === 0),
+    );
+}
+
+// ===== allocation guard =====
+console.log('Allocation guard');
+
+const ALLOCATIONS: ReadonlyArray<readonly [RegExp, string]> = [
+    [/\bnew\s/, 'new'],
+    [/\.clone\(/, '.clone('],
+    [/\.map\(/, '.map('],
+    [/\.filter\(/, '.filter('],
+    [/\.slice\(/, '.slice('],
+    [/\.concat\(/, '.concat('],
+    [/Array\.from/, 'Array.from'],
+    [/Object\.assign/, 'Object.assign'],
+    [/\{\s*\.\.\./, 'object spread'],
+];
+
+function functionBody(source: string, signature: string): string | undefined {
+    const start = source.indexOf(signature);
+    if (start === -1) return undefined;
+
+    const open = source.indexOf('{', start);
+    if (open === -1) return undefined;
+
+    let depth = 0;
+    for (let index = open; index < source.length; index += 1) {
+        if (source[index] === '{') depth += 1;
+        if (source[index] === '}') {
+            depth -= 1;
+            if (depth === 0) return source.slice(open + 1, index);
+        }
+    }
+    return undefined;
+}
+
+const SRC = decodeURIComponent(new URL('../src/', import.meta.url).pathname);
+const GUARDED: ReadonlyArray<readonly [string, string]> = [
+    ['rendering/ObjectViews.ts', 'export function syncViews'],
+    ['rendering/DebrisViews.ts', 'export function syncDebrisViews'],
+    ['game/Physics.ts', 'step(pool'],
+    ['game/Slicer.ts', 'cut(pool'],
+    ['game/Input.ts', '#emit(event'],
+    ['rendering/BladeTrail.ts', 'function add(world'],
+];
+
+for (const [file, signature] of GUARDED) {
+    const source = readFileSync(`${SRC}${file}`, 'utf8');
+    const body = functionBody(source, signature);
+
+    if (body === undefined) {
+        check(`${file} ${signature} found`, false, 'function body not found');
+        continue;
+    }
+
+    const hits = ALLOCATIONS.filter(([pattern]) => pattern.test(body)).map(([, name]) => name);
+    check(`${file} ${signature} allocates nothing`, hits.length === 0, hits.join(', '));
+}
+
+if (failures > 0) {
+    throw new Error(`${failures} perf check(s) failed`);
+}
+console.log(`ALL PASS — ${total} checks`);
