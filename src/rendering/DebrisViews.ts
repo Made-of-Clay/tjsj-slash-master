@@ -1,33 +1,42 @@
-import { Mesh } from 'three/webgpu';
-import type { BufferGeometry, Scene } from 'three/webgpu';
-import type { MeshStandardMaterial } from 'three/webgpu';
+import { DynamicDrawUsage, InstancedMesh, Object3D } from 'three/webgpu';
+import type { BufferGeometry, MeshStandardMaterial, Scene } from 'three/webgpu';
 import { CUT } from '../config';
 import type { GameObjectDefinition, ObjectCategory } from '../content/types';
 import type { DebrisPiece } from '../game/Debris';
 import { bakeModel } from './Model';
 
 /**
- * View layer for sliced pieces (step 5B): one mesh per Debris ring slot,
- * geometry resolved per def and piece index, materials shared with the
- * object views (one per category for the whole game).
- *
- * Allocation rule: the geometry cache is built once here, so the cut path
- * never resolves geometry at runtime. `syncDebrisViews` per frame only
- * writes references and copies transforms.
+ * View layer for sliced pieces: one `InstancedMesh` per (def, piece index),
+ * `count` = draw count. Geometry resolves once here, so the cut path never
+ * resolves geometry at runtime.
  */
 export interface DebrisViews {
-    /** Index-aligned with the Debris ring slots. */
-    readonly meshes: readonly Mesh[];
-    /** defId → [piece 0 geometry, piece 1 geometry]. */
-    readonly geometries: Map<string, readonly BufferGeometry[]>;
+    /** defId → [piece 0, piece 1] instanced meshes. */
+    readonly instanced: Map<string, readonly [InstancedMesh, InstancedMesh]>;
     /** Shared per-category materials (ObjectViews owns them). */
     readonly materials: Record<ObjectCategory, MeshStandardMaterial>;
+}
+
+const scratch = new Object3D();
+
+function createPieceMesh(
+    scene: Scene,
+    capacity: number,
+    geometry: BufferGeometry,
+    material: MeshStandardMaterial,
+): InstancedMesh {
+    const mesh = new InstancedMesh(geometry, material, capacity);
+    mesh.count = 0;
+    mesh.frustumCulled = false;
+    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    scene.add(mesh);
+    return mesh;
 }
 
 /** Authored pieces bake at final size; defaults clone the parent × `pieceScale`. */
 export function createDebrisViews(
     scene: Scene,
-    count: number,
+    capacity: number,
     models: readonly GameObjectDefinition[],
     materials: Record<ObjectCategory, MeshStandardMaterial>,
 ): DebrisViews {
@@ -42,55 +51,53 @@ export function createDebrisViews(
         return geometry;
     };
 
-    const geometries = new Map<string, BufferGeometry[]>();
+    const instanced = new Map<string, readonly [InstancedMesh, InstancedMesh]>();
     for (const def of models) {
-        const pair: BufferGeometry[] = [];
-        for (let index = 0; index < 2; index += 1) {
+        if (instanced.has(def.id)) continue;
+
+        const material = materials[def.category];
+        const geometryAt = (index: number): BufferGeometry => {
             const authored = def.pieces?.[index];
-            pair.push(authored ? bakeModel(authored) : scaledClone(def));
-        }
-        geometries.set(def.id, pair);
+            return authored ? bakeModel(authored) : scaledClone(def);
+        };
+
+        instanced.set(def.id, [
+            createPieceMesh(scene, capacity, geometryAt(0), material),
+            createPieceMesh(scene, capacity, geometryAt(1), material),
+        ]);
     }
 
-    const meshes: Mesh[] = [];
-    for (let index = 0; index < count; index += 1) {
-        const mesh = new Mesh();
-        mesh.visible = false;
-        scene.add(mesh);
-        meshes.push(mesh);
-    }
-
-    return { meshes, geometries, materials };
+    return { instanced, materials };
 }
 
-/**
- * Copies live piece state onto the slot meshes. Called from `render`, never
- * `fixedUpdate` — presentation, not simulation. Hidden slots get no
- * transform writes; a piece whose `defId` resolves to nothing is hidden
- * rather than drawn with a stale shape.
- */
+/** Copies live piece state into per-def, per-piece instance slots. */
 export function syncDebrisViews(views: DebrisViews, pieces: readonly DebrisPiece[]): void {
-    const { meshes, geometries, materials } = views;
+    const { instanced } = views;
 
-    for (let index = 0; index < pieces.length; index += 1) {
-        const piece = pieces[index];
-        const mesh = meshes[index];
-
-        if (!piece.active) {
-            mesh.visible = false;
-            continue;
+    for (const pair of instanced.values()) {
+        for (const mesh of pair) {
+            mesh.count = 0;
         }
+    }
 
-        const geometry = geometries.get(piece.defId)?.[piece.pieceIndex];
-        if (!geometry) {
-            mesh.visible = false;
-            continue;
+    for (const piece of pieces) {
+        if (!piece.active) continue;
+
+        const mesh = instanced.get(piece.defId)?.[piece.pieceIndex];
+        if (!mesh || mesh.count >= mesh.instanceMatrix.count) continue;
+
+        scratch.position.copy(piece.position);
+        scratch.rotation.copy(piece.rotation);
+        scratch.updateMatrix();
+        mesh.setMatrixAt(mesh.count, scratch.matrix);
+        mesh.count += 1;
+    }
+
+    for (const pair of instanced.values()) {
+        for (const mesh of pair) {
+            if (mesh.count > 0) {
+                mesh.instanceMatrix.needsUpdate = true;
+            }
         }
-
-        mesh.geometry = geometry;
-        mesh.material = materials[piece.category];
-        mesh.position.copy(piece.position);
-        mesh.rotation.copy(piece.rotation);
-        mesh.visible = true;
     }
 }
