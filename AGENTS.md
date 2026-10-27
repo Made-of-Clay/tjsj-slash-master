@@ -22,8 +22,9 @@ pending [You] eyeball/on-device tuning carries over, nothing blocks on it.
   (quadratic falloff, sine phases, base camera pose captured, applied after
   `syncViewport`). The cut sink bursts sparks + shake from the parent before
   `pool.release`.
-- **B — scoring:** `bba7c4d`. `game/Combo.ts` per-stroke additive bonus
-  (`COMBO.step × (k − 1)`), stroke identity from `Swipes.stroke`; HUD combo
+- **B — scoring:** `bba7c4d`, re-keyed 2026-10-26. `game/Combo.ts`
+  time-window chain: the k-th cut banks `COMBO.step × (k − 1)`, pays out when
+  no cut lands for `COMBO.window` s (pause/buzzer flush it); HUD combo
   line with 700 ms hold + 300 ms fade. Third category `hazard` +
   `GameObjectDefinition.weight` (prefix-sum weighted `Spawner` pick); `bomb`
   (−3) / `coal` (−2), weight 0.15 → ~3.6 % of spawns. `ui/records.ts` best
@@ -39,7 +40,7 @@ pending [You] eyeball/on-device tuning carries over, nothing blocks on it.
   buffer; restart skips the start card. The pause button hides while a card is
   up, so overlays never have a live control behind them.
 - **Tests:** foundation 58, playfield, launch (+2 weighted), swipe 51, cut 68,
-  rules 40 (+8 combo), content 133 (+22 hazard/weight/bake), perf 79 (+25
+  rules 53 (+21 combo), content 133 (+22 hazard/weight/bake), perf 79 (+25
   spark views + allocation guard), polish 51 (audio/haptics/records/flow).
 - **Not built (deliberate):** runtime theme swap (step 10), texture atlases /
   glTF, audio/image assets, LOD/occlusion, analytics.
@@ -52,7 +53,7 @@ pending [You] eyeball/on-device tuning carries over, nothing blocks on it.
   background + blade trail) at 60 FPS, both themes.
 - **[You] carry-over tuning:** `CUT`/`SWIPE`/`EFFECTS`/`SHAKE` feel,
   lighting/palette, `PLAYFIELD` numbers, arcs, HUD sizes/copy,
-  `ROUND.duration` + ramp feel, `COMBO.step`, hazard weights.
+  `ROUND.duration` + ramp feel, `COMBO.step` + `COMBO.window`, hazard weights.
 - **Next step:** step 10 (per PLAN §10) — write `docs/PLAN-STEP-10-*.md` at
   session start; step 9's baseline is a paced round: start card, felt cuts,
   combo scoring, rare hazards, synth sound, persisted best.
@@ -66,7 +67,7 @@ pending [You] eyeball/on-device tuning carries over, nothing blocks on it.
 **Step 6:** A round clock = `game/Round.ts` (scalar state, `over` latch) · B `round.step` runs last in `fixedUpdate`; `over` → freeze mid-air · C `round.progress` feeds the spawn ramp (3E un-parked) · D HUD = `ui/hud.ts` on the step-1 root, DOM writes only on integer change · E restart re-arms every mutable system (score/round/spawner/pool/debris/swipes) · F missed fruit: no consequence (PLAN §6).
 **Step 7:** A procedural parts models, no assets · B `ObjectModel` parts | asset (asset = step-9 seam) · C bake once at boot, one geometry per def · D one material per category, accent = emissive · E boot-time `?theme=` registry · F default `pieceScale` clone, pumpkin authored halves · G `size` = max extent, radius ≤ `sideMargin` · H gameplay never imports themes/models (harness) · I Christmas per PLAN §7 · J no deps; only `BufferGeometryUtils` addon · K HUD unchanged · L `getTheme` + boot resolution; `setTheme` is step 10.
 **Step 8:** A one `InstancedMesh` per def (per-category would need merged shapes) · B capacity = `POOL_SIZE` / `CUT.capacity` · C `count` is the draw count; one reused `Object3D`; no instance ids · D `frustumCulled = false` · E scene graph = defs × 3, pool-size independent · F zero steady-frame allocation, harness-guarded · G `verify:perf` headless; draw calls + frame time measured on device · H `DEBUG_PERF` 1 Hz readout · I pools/pixel cap/hidden pause/low-poly/TSL already done · J no deps.
-**Step 9:** A sparks = one `InstancedMesh` per category over one unit shard (per-instance colour unproven on `WebGPURenderer`) · B shake = scalar trauma, quadratic falloff, applied after `syncViewport` · C combo = per-stroke additive from `Swipes.stroke` (no stroke-end resolution) · D hazard = third category, negative score, no round end · E spawn rarity = per-def `weight`, prefix sums at construction · F records = guarded `localStorage`, in-memory fallback, write-on-beat only · G audio = procedural synth, unlock inside the gesture, one context per page · H haptics = `navigator.vibrate`, silent no-op, follows mute · I flow = start card + pause card, restart skips the start card, `GameLoop` hidden-tab pause stays authoritative · J verification = `verify:polish` + content/perf updates, feel stays by eye · K draw budget ≤ 17 (12 instanced + 3 spark meshes + background + blade trail) · L no deps, no assets; app chunk delta measured +3.2 kB gzip (target revised from ~2.5).
+**Step 9:** A sparks = one `InstancedMesh` per category over one unit shard (per-instance colour unproven on `WebGPURenderer`) · B shake = scalar trauma, quadratic falloff, applied after `syncViewport` · C combo = time-window chain, bank pays on lapse (a stroke-keyed chain farmed held pointers) · D hazard = third category, negative score, no round end · E spawn rarity = per-def `weight`, prefix sums at construction · F records = guarded `localStorage`, in-memory fallback, write-on-beat only · G audio = procedural synth, unlock inside the gesture, one context per page · H haptics = `navigator.vibrate`, silent no-op, follows mute · I flow = start card + pause card, restart skips the start card, `GameLoop` hidden-tab pause stays authoritative · J verification = `verify:polish` + content/perf updates, feel stays by eye · K draw budget ≤ 17 (12 instanced + 3 spark meshes + background + blade trail) · L no deps, no assets; app chunk delta measured +3.2 kB gzip (target revised from ~2.5).
 
 ## Commands
 

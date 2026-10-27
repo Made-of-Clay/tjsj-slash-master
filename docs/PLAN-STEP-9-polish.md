@@ -37,20 +37,20 @@ Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
 
 ## Decisions (step 9, locked 2026-10-25, [You])
 
-| #   | Decision     | Choice                                                                                                                                                                                                                | Rationale                                                                                                                                                 |
-| --- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A   | Sparks       | Pure ring in `game/Effects.ts`; one `InstancedMesh` **per category** in `rendering/SparkViews.ts`, shared low-poly shard geometry, `EFFECTS.capacity` slots, zero-alloc sync.                                         | Matches the step-8 per-def/per-category pattern. Per-instance colour is unproven on `WebGPURenderer`; a mesh per category is one draw and already proven. |
-| B   | Shake        | Scalar trauma per camera (`rendering/Shake.ts`), quadratic falloff, sine phases, decay in `fixedUpdate`, offset applied in `render` after `syncViewport`. Base pose captured at boot.                                 | Presentation-only, deterministic, harness-testable; never writes into camera state.                                                                       |
-| C   | Combo        | **Per-stroke** additive bonus: the k-th cut of a stroke (k ≥ 2) adds `COMBO.step × (k − 1)`. Stroke identity from `Swipes.stroke`; `Score` stays add-only.                                                            | Reads off the drain with no new clock, no end-of-stroke resolution, no allocation; a 4-cut swipe pays 6 × step.                                           |
-| D   | Hazard       | New `hazard` category: cutting it pays `def.score` (negative) plus max shake and a boom. It does **not** end the round.                                                                                               | Game over stays "time's up" (step 6 decision), so the card's meaning doesn't fork.                                                                        |
-| E   | Spawn weight | `GameObjectDefinition.weight` (default 1); the Spawner builds prefix sums at construction and picks by weight.                                                                                                        | Hazards need rarity; this is the smallest change that gives content control without reopening spawn ranges.                                               |
-| F   | Records      | `ui/records.ts`: guarded `localStorage` (`slash-master.best`, `slash-master.muted`), in-memory fallback when storage throws (private mode). Written only when beaten.                                                 | Survives reload, never breaks boot; testable with an injected storage stub.                                                                               |
-| G   | Audio        | Procedural `AudioEngine` (`audio/Audio.ts`): one `AudioContext` unlocked on first `pointerdown`, synth voices `swoosh/pop/boom/combo/over/ui`, master gain, mute persisted.                                           | Zero payload, zero deps, no autoplay-policy surprises past the first gesture.                                                                             |
-| H   | Haptics      | `ui/haptics.ts`: `navigator.vibrate` pulses on cut / hazard / round end, silent no-op elsewhere; follows the mute toggle.                                                                                             | Android gets tactile feedback; iOS silently ignores it.                                                                                                   |
-| I   | Flow         | Boot shows a start overlay (tap to start) that gates the round clock and spawner; restart returns straight to play. Explicit pause button + resume overlay; `GameLoop`'s hidden-tab pause stays authoritative.        | No mid-round restart surprise, no timer running behind a card.                                                                                            |
-| J   | Verification | `scripts/verify-polish.ts` + `pnpm verify:polish`: effects ring, combo math, hazard rule + weighting, records, shake decay, audio/haptics state machines, gating. Plus updates to `verify-content` and `verify-perf`. | Same harness discipline as steps 3–8; feel stays by-eye, state stays asserted.                                                                            |
-| K   | Draw budget  | ≤ 17 while swiping: 12 instanced + 3 spark meshes + background + blade trail.                                                                                                                                         | One new mesh per category; PERF-BUDGET row updated.                                                                                                       |
-| L   | Dependencies | None. Payload delta code-only; landed +3.2 kB gzip app chunk (target was ~2.5 kB); no audio/image assets.                                                                                                             | Guard rails unchanged from steps 7–8; trimmed the number, not the feel.                                                                                   |
+| #   | Decision     | Choice                                                                                                                                                                                                                | Rationale                                                                                                                                                                               |
+| --- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A   | Sparks       | Pure ring in `game/Effects.ts`; one `InstancedMesh` **per category** in `rendering/SparkViews.ts`, shared low-poly shard geometry, `EFFECTS.capacity` slots, zero-alloc sync.                                         | Matches the step-8 per-def/per-category pattern. Per-instance colour is unproven on `WebGPURenderer`; a mesh per category is one draw and already proven.                               |
+| B   | Shake        | Scalar trauma per camera (`rendering/Shake.ts`), quadratic falloff, sine phases, decay in `fixedUpdate`, offset applied in `render` after `syncViewport`. Base pose captured at boot.                                 | Presentation-only, deterministic, harness-testable; never writes into camera state.                                                                                                     |
+| C   | Combo        | **Time-window** additive bonus: the k-th cut of a chain (k ≥ 2) banks `COMBO.step × (k − 1)`; the bank pays out when no cut lands for `COMBO.window` seconds. `Score` stays add-only.                                 | A held pointer has no stroke end, so a stroke-keyed chain farmed the multiplier forever. The window bounds it, keeps scoring off pointer-event timing, and pays a 4-cut chain 6 × step. |
+| D   | Hazard       | New `hazard` category: cutting it pays `def.score` (negative) plus max shake and a boom. It does **not** end the round.                                                                                               | Game over stays "time's up" (step 6 decision), so the card's meaning doesn't fork.                                                                                                      |
+| E   | Spawn weight | `GameObjectDefinition.weight` (default 1); the Spawner builds prefix sums at construction and picks by weight.                                                                                                        | Hazards need rarity; this is the smallest change that gives content control without reopening spawn ranges.                                                                             |
+| F   | Records      | `ui/records.ts`: guarded `localStorage` (`slash-master.best`, `slash-master.muted`), in-memory fallback when storage throws (private mode). Written only when beaten.                                                 | Survives reload, never breaks boot; testable with an injected storage stub.                                                                                                             |
+| G   | Audio        | Procedural `AudioEngine` (`audio/Audio.ts`): one `AudioContext` unlocked on first `pointerdown`, synth voices `swoosh/pop/boom/combo/over/ui`, master gain, mute persisted.                                           | Zero payload, zero deps, no autoplay-policy surprises past the first gesture.                                                                                                           |
+| H   | Haptics      | `ui/haptics.ts`: `navigator.vibrate` pulses on cut / hazard / round end, silent no-op elsewhere; follows the mute toggle.                                                                                             | Android gets tactile feedback; iOS silently ignores it.                                                                                                                                 |
+| I   | Flow         | Boot shows a start overlay (tap to start) that gates the round clock and spawner; restart returns straight to play. Explicit pause button + resume overlay; `GameLoop`'s hidden-tab pause stays authoritative.        | No mid-round restart surprise, no timer running behind a card.                                                                                                                          |
+| J   | Verification | `scripts/verify-polish.ts` + `pnpm verify:polish`: effects ring, combo math, hazard rule + weighting, records, shake decay, audio/haptics state machines, gating. Plus updates to `verify-content` and `verify-perf`. | Same harness discipline as steps 3–8; feel stays by-eye, state stays asserted.                                                                                                          |
+| K   | Draw budget  | ≤ 17 while swiping: 12 instanced + 3 spark meshes + background + blade trail.                                                                                                                                         | One new mesh per category; PERF-BUDGET row updated.                                                                                                                                     |
+| L   | Dependencies | None. Payload delta code-only; landed +3.2 kB gzip app chunk (target was ~2.5 kB); no audio/image assets.                                                                                                             | Guard rails unchanged from steps 7–8; trimmed the number, not the feel.                                                                                                                 |
 
 ### Corrections (as built)
 
@@ -66,6 +66,10 @@ Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
   gzip) vs the ~2.5 kB target. Kept: the delta is code, no assets.
 - Combo linger was not planned: 700 ms hold + 300 ms fade so a good swipe
   does not read as a flicker.
+- Combo was **re-keyed from stroke to time window** (2026-10-26 bug): holding
+  the pointer down kept a stroke open, so each further cut raised the
+  multiplier without bound. Cuts now bank `step × (k − 1)` and pay on window
+  lapse; pause and the buzzer flush the bank (`verify:rules` 40 → 53).
 - Cards share one `.overlay` builder/CSS; mute + pause are appended after the
   cards so both stay tappable on every screen.
 
@@ -73,7 +77,7 @@ Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
 
 ```
 src/game/Effects.ts               spark ring (pure sim)                            [I]
-src/game/Combo.ts                 per-stroke combo accumulator                    [I]
+src/game/Combo.ts                 time-window combo accumulator                  [I]
 src/rendering/SparkViews.ts       per-category InstancedMesh + sync                [I]
 src/rendering/Shake.ts            trauma → camera offset                          [I]
 src/audio/Audio.ts                procedural WebAudio engine                      [I]
@@ -159,13 +163,15 @@ hits the wrong thing.
 
 ### Work
 
-- [I] `game/Combo.ts`: tracks `stroke` + `count`; `register(stroke, score)`
-  adds `COMBO.step × (count − 1)` for each cut past the first in a stroke and
-  returns the bonus paid (0 when it is the first cut).
-- [I] `Input`/`Swipes`: monotonic stroke counter (`Swipes.stroke`); `main.ts`
-  feeds `combo.register(...)` from the cut path and `hud.sync` displays it.
+- [I] `game/Combo.ts`: tracks `count`, `bank` and the remaining window;
+  `register(cuts)` adds `COMBO.step × (count − 1)` per cut past the first and
+  restarts the window; `step(dt)` pays the bank out when the window lapses;
+  `flush()` banks an open chain early (pause, buzzer).
+- [I] `main.ts`: feeds `combo.register(...)` from the cut path, ages the
+  chain before the drain, and adds the payout to `Score`; `hud.sync` displays
+  the live count.
 - [I] `ui/hud.ts`: combo widget on the root slot `root.ts` already reserves —
-  visible from the second cut of a stroke, hidden when the stroke ends; DOM
+  visible from the second cut of a chain, faded when the chain closes; DOM
   writes only on change (step 6E pattern).
 - [I] `content/types.ts`: `ObjectCategory` gains `hazard`;
   `GameObjectDefinition.weight?: number`. `content/themes/*`: one hazard def
@@ -255,7 +261,7 @@ cost step 8 anything.
   pause stays authoritative; pausing the round does not stop the render loop
   (the pause card still draws).
 - [I] `scripts/verify-polish.ts` + `pnpm verify:polish`: spark ring
-  (burst/step/despawn/overflow), combo math (per-stroke reset, k-th cut
+  (burst/step/despawn/overflow), combo math (window reset, k-th cut
   bonus, no bonus on first cut), hazard rule (negative score, no round end),
   weighted spawn distribution over a seeded RNG, records (set/read/beaten-only
   write, storage-throw fallback), shake (clamp, decay to zero, apply returns to
@@ -320,7 +326,9 @@ best score persists, pause works) by hand on both themes.
   the captured base pose; an accumulating offset would drift the playfield.
 - **Spark draw growth**: one mesh per category is deliberate; keep the budget
   row honest and re-measure on device in D.
-- **Combo across strokes**: the stroke counter lives in `Swipes` so gated-out
-  taps never break a combo; pointer-event timing must not leak into scoring.
+- **Combo across strokes**: the chain is keyed on time, not on the pointer
+  stroke — a pointer held down never ends, so a stroke-keyed chain never closed
+  and the multiplier climbed for free. Pointer-event timing must not leak into
+  scoring; the window is sim time, not event time.
 - **Start gate vs hidden-tab pause**: two independent reasons to not simulate;
   `GameLoop.active` stays their AND, and the start screen must still render.

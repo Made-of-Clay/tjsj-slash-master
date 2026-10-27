@@ -171,10 +171,14 @@ export const LIGHTING = {
 } as const;
 
 // ===== COMBO =====
-// Per-stroke combo (step 9B): the k-th cut of one stroke adds
-// `step × (k − 1)`, so a 4-cut swipe pays 6 × step. [You] tunes the number.
+// Time-window combo (step 9B): the k-th cut of a chain banks `step × (k − 1)`,
+// so a 4-cut chain pays 6 × step. The bank pays out when no cut lands for
+// `window` seconds; the window, not the pointer stroke, keeps a chain alive.
+// [You] tunes both numbers.
 export const COMBO = {
     step: 2,
+    /** Seconds a chain stays open after its latest cut. */
+    window: 0.6,
 } as const;
 
 // ===== EFFECTS =====

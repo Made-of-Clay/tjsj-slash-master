@@ -17,6 +17,18 @@ Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log
 - `verify:swipe` 47 → 51 checks (tremor emits nothing, tremor never opens the
   gate, slow drag still emits, scrubbing in place stays shut).
 
+### Combo is keyed on time, not the pointer stroke
+
+- Bug: holding touch/mousedown kept one stroke open forever, so every cut fed
+  the same chain and the multiplier climbed without bound.
+- `game/Combo.ts`: `register(cuts)` banks `COMBO.step × (k − 1)` and restarts
+  `COMBO.window` (0.6 s); `step(dt)` pays the bank when the window lapses;
+  `flush()` closes a chain early. `reset()` drops it.
+- `main.ts`: chain ages before the drain, payout lands in `Score`, pause and
+  the buzzer flush; `strokeActive`/`Swipes.stroke` removed (no other consumer).
+- `verify:rules` 40 → 53 checks (window lapse, held pointer, mid-window cut,
+  stepped accumulation, flush, reset).
+
 ### Dev overlays opt-in
 
 - stats.js meter + playfield guide rect now require `?dev` on the dev server

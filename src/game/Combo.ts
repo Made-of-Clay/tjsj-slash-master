@@ -1,50 +1,57 @@
 import { COMBO } from '../config';
 
 /**
- * Per-stroke combo (step 9B): counts cuts inside one stroke and pays an
- * additive bonus for every cut past the first.
+ * Time-window combo (step 9B, reworked after the held-pointer bug): the k-th cut
+ * of a live chain banks `COMBO.step × (k − 1)`. Every cut restarts the window;
+ * when it lapses the bank pays out and the chain starts over.
  *
- * Stroke identity comes from `Swipes.stroke`, which only advances when a new
- * stroke begins — pointer-event timing never leaks into scoring, and a gated
- * tap cannot break a combo. `Score` stays an add-only accumulator.
+ * The window, not the pointer stroke, defines the chain — holding the pointer
+ * down without cutting can no longer keep the multiplier climbing, and the
+ * count on screen always matches cuts that landed in quick succession.
  */
 export class Combo {
-    /** Stroke the count belongs to; -1 = none yet. */
-    #stroke = -1;
     #count = 0;
+    #bank = 0;
+    #remaining = 0;
 
-    /** Cuts in the current stroke (display only). */
+    /** Cuts in the live chain (display only). */
     get count(): number {
         return this.#count;
     }
 
-    /**
-     * Registers `cuts` hits from stroke `stroke` and returns the bonus owed for
-     * them: the k-th cut of a stroke pays `COMBO.step × (k − 1)`.
-     */
-    register(stroke: number, cuts: number): number {
-        if (stroke !== this.#stroke) {
-            this.#stroke = stroke;
-            this.#count = 0;
-        }
+    /** Registers `cuts` hits: each extends the window and banks its step. */
+    register(cuts: number): number {
+        if (cuts <= 0) return this.#count;
 
-        let bonus = 0;
         for (let index = 0; index < cuts; index += 1) {
             this.#count += 1;
-            if (this.#count > 1) {
-                bonus += COMBO.step * (this.#count - 1);
-            }
+            if (this.#count > 1) this.#bank += COMBO.step * (this.#count - 1);
         }
-        return bonus;
+        this.#remaining = COMBO.window;
+        return this.#count;
     }
 
-    /** New stroke: the count restarts, so a stale combo never displays. */
-    beginStroke(): void {
+    /**
+     * Ages the window by `dt` and returns the bank once it lapses (0 while the
+     * chain is still open). Runs once per fixed step, before that step's cuts.
+     */
+    step(dt: number): number {
+        if (this.#count === 0) return 0;
+
+        this.#remaining -= dt;
+        return this.#remaining > 0 ? 0 : this.flush();
+    }
+
+    /** Closes the chain early (pause, buzzer) and returns what it banked. */
+    flush(): number {
+        const paid = this.#bank;
         this.#count = 0;
+        this.#bank = 0;
+        this.#remaining = 0;
+        return paid;
     }
 
     reset(): void {
-        this.#stroke = -1;
-        this.#count = 0;
+        this.flush();
     }
 }

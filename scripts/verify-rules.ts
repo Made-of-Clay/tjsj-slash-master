@@ -284,23 +284,61 @@ console.log('Round x Spawner');
 console.log('Combo');
 {
     const combo = new Combo();
+    check('the first cut of a chain banks nothing', combo.register(1) === 1);
+    check('a chain under the window banks, not pays', combo.step(COMBO.window / 2) === 0);
+    check('the second cut banks one step', combo.register(1) === 2);
+    check('the third cut banks two steps', combo.register(1) === 3);
+    check('count tracks the chain', combo.count === 3, `count=${combo.count}`);
+    check('the window lapsing pays the whole bank', combo.step(COMBO.window) === COMBO.step * 3);
+    check('the chain restarts after payout', combo.count === 0);
 
-    check('the first cut of a stroke pays nothing', combo.register(1, 1) === 0);
-    check('the second cut pays one step', combo.register(1, 1) === COMBO.step);
-    check(
-        'the third cut pays two steps',
-        combo.register(1, 1) === COMBO.step * 2,
-        `bonus=${combo.register(1, 0)}`,
-    );
-    check('count tracks the stroke', combo.count === 3, `count=${combo.count}`);
+    // Regression: a pointer held down (no cut, no stroke end) farmed the
+    // multiplier forever while the chain was keyed on the stroke.
+    check('a held pointer with no cuts pays nothing', combo.step(COMBO.window * 10) === 0);
+    check('the first cut after a lapse starts over', combo.register(1) === 1);
 
-    // A 4-cut swipe is the documented total: 0 + 1 + 2 + 3 steps = 6.
+    // A 4-cut chain is the documented total: 0 + 1 + 2 + 3 steps = 6.
     const four = new Combo();
-    check('a four-cut swipe pays six steps in total', four.register(2, 4) === COMBO.step * 6);
+    check('a four-cut chain banks six steps', four.register(4) === 4);
+    check('the four-cut bank lands on expiry', four.step(COMBO.window) === COMBO.step * 6);
 
-    check('a new stroke restarts the count', combo.register(2, 1) === 0);
-    check('beginStroke clears the displayed count', (combo.beginStroke(), combo.count === 0));
-    check('reset forgets the stroke id too', (combo.reset(), combo.register(2, 1) === 0));
+    const rhythm = new Combo();
+    rhythm.register(1);
+    rhythm.step(COMBO.window * 0.9);
+    check('a cut inside the window keeps the chain open', rhythm.register(1) === 2);
+    check('the extended window pays nothing yet', rhythm.step(COMBO.window * 0.9) === 0);
+
+    // Fixed steps accumulate: 38 × 1/60 s > window.
+    const stepped = new Combo();
+    stepped.register(2);
+    let paid = 0;
+    for (let index = 0; index < 38; index += 1) paid += stepped.step(1 / 60);
+    check('small steps add up to the same expiry', paid === COMBO.step && stepped.count === 0);
+
+    const idle = new Combo();
+    idle.register(1);
+    idle.step(COMBO.window * 0.9);
+    check('an empty register does not extend the window', idle.register(0) === 1);
+    check(
+        'the original window still lapses',
+        idle.step(COMBO.window * 0.2) === 0 && idle.count === 0,
+    );
+
+    const flushed = new Combo();
+    flushed.register(2);
+    check('flush pays an open chain early', flushed.flush() === COMBO.step);
+    check('flush empties the chain', flushed.count === 0);
+    check('flush on an empty chain pays nothing', flushed.flush() === 0);
+
+    const dropped = new Combo();
+    dropped.register(3);
+    dropped.reset();
+    check(
+        'reset drops the chain and its bank',
+        dropped.count === 0 && dropped.step(COMBO.window * 2) === 0,
+    );
+
+    check('COMBO.window is finite and positive', Number.isFinite(COMBO.window) && COMBO.window > 0);
 }
 
 // ===== config =====

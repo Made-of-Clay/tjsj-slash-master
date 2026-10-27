@@ -211,7 +211,6 @@ async function boot(): Promise<void> {
     const swipes = new Swipes(SWIPE.gateDistance);
     const score = new Score();
     const combo = new Combo();
-    let strokeActive = false;
     input.onSwipe((segment) => swipes.push(segment));
     input.onStrokeStart(() => {
         // Inside the gesture: this is the only moment iOS allows an
@@ -219,13 +218,8 @@ async function boot(): Promise<void> {
         audio.unlock();
         audio.play('swoosh');
         swipes.beginStroke();
-        combo.beginStroke();
-        strokeActive = true;
     });
-    input.onStrokeEnd(() => {
-        swipes.endStroke();
-        strokeActive = false;
-    });
+    input.onStrokeEnd(() => swipes.endStroke());
 
     // Step 5: drained segments become cuts; each cut scores and spawns two
     // debris pieces. Cuts run inside the drain — before spawner/physics move
@@ -269,7 +263,6 @@ async function boot(): Promise<void> {
         if (!document.hidden) return;
         input.cancelStroke();
         swipes.clear();
-        strokeActive = false;
     });
 
     // Consumed from fixedUpdate below; function declarations so the sim path
@@ -289,10 +282,9 @@ async function boot(): Promise<void> {
 
         const cuts = slicer.cut(objects, segment);
         if (cuts > 0) {
-            // Step 9B: per-stroke combo, scored additively on top of the cuts.
-            const bonus = combo.register(swipes.stroke, cuts);
-            if (bonus > 0) audio.play('combo', combo.count);
-            score.add(bonus);
+            // Step 9B: the chain banks its own bonus; `combo.step` pays it out.
+            const count = combo.register(cuts);
+            if (count > 1) audio.play('combo', count);
         }
     }
 
@@ -331,7 +323,6 @@ async function boot(): Promise<void> {
         hud.setPlaying(true);
         score.reset();
         combo.reset();
-        strokeActive = false;
         round.reset();
         spawner.reset();
         objects.releaseAll();
@@ -361,7 +352,7 @@ async function boot(): Promise<void> {
         // A stroke interrupted by the card must not cut on resume.
         input.cancelStroke();
         swipes.clear();
-        strokeActive = false;
+        score.add(combo.flush());
         audio.play('ui');
     });
 
@@ -391,6 +382,9 @@ async function boot(): Promise<void> {
             // segments are cut against pre-move positions. Once per fixed
             // step, not per render: a frame with 0 sub-steps leaves the
             // segments for the next step to consume.
+            // The chain ages before this step's cuts: one that lapsed between
+            // steps pays out instead of absorbing a cut that arrived late.
+            score.add(combo.step(dt));
             swipes.drain(cutSwipe);
             spawner.step(objects, playfield.bounds, dt, round.progress);
             physics.step(objects, playfield.bounds, dt);
@@ -402,6 +396,8 @@ async function boot(): Promise<void> {
             // Clock last: the step that crosses the buzzer completes fully,
             // every later step is frozen (step 6 Decision B).
             round.step(dt);
+            // The buzzer can land mid-chain: bank what the chain earned.
+            if (round.over) score.add(combo.flush());
         },
         render: () => {
             stats?.begin();
@@ -414,7 +410,7 @@ async function boot(): Promise<void> {
             syncSparkViews(sparkViews, effects.sparks);
             // HUD reads latest state (never steps); both calls no-op when
             // nothing changed, so the steady frame does no DOM work.
-            const liveCombo = strokeActive && !round.over ? combo.count : 0;
+            const liveCombo = round.over ? 0 : combo.count;
             hud.sync(score.total, round.secondsLeft, liveCombo);
             if (round.over && !overShown) {
                 overShown = true;

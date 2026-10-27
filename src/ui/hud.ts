@@ -5,7 +5,7 @@
  * when a displayed value changes, so the steady frame does zero DOM work.
  */
 export interface Hud {
-    /** Push the latest score / seconds-left / cuts this stroke; no-ops when unchanged. */
+    /** Push the latest score / seconds-left / cuts in the live combo chain. */
     sync(score: number, secondsLeft: number, combo: number): void;
     /** Reveal the card with the final score and the stored best. Latches until restart. */
     showGameOver(finalScore: number, best: number, isBest: boolean): void;
@@ -24,8 +24,8 @@ export interface Hud {
     setMuted(muted: boolean): void;
 }
 
-// Combo linger (step 9 feedback): the last count stays legible after the stroke
-// ends, then fades — otherwise a good swipe reads as a flicker.
+// Combo linger (step 9 feedback): the last count stays legible after the chain
+// closes, then fades — otherwise a good chain reads as a flicker.
 const COMBO_HOLD_MS = 700;
 const COMBO_FADE_MS = 300;
 
@@ -75,7 +75,7 @@ export function createHud(root: HTMLElement): Hud {
     bar.append(scoreEl, timerEl);
     root.append(bar);
 
-    // Combo line: hidden until a stroke has at least two cuts (step 9B).
+    // Combo line: hidden until the chain has at least two cuts (step 9B).
     const comboEl = document.createElement('div');
     comboEl.className = 'hud-combo';
     comboEl.hidden = true;
