@@ -193,6 +193,20 @@ console.log('Stroke gate');
     missed.push(seg(2, 0, 2.4, 0));
     check('beginStroke recovers a missed stroke end', !missed.live && missed.pending === 1);
 
+    // Regression: scrubbing back and forth covers distance without displacing,
+    // so a path-length gate opened on a pointer that never really moved.
+    const scrub = new Swipes(1.0);
+    scrub.beginStroke();
+    for (let index = 0; index < 10; index += 1) {
+        scrub.push(seg(0, 0, 0.9, 0));
+        scrub.push(seg(0.9, 0, 0, 0));
+    }
+    check(
+        'scrubbing in place never opens the gate',
+        !scrub.live && scrub.pending === 0,
+        `pending=${scrub.pending}`,
+    );
+
     const free = new Swipes(0);
     free.beginStroke();
     free.push(seg(0, 0, 0.01, 0));
@@ -455,6 +469,47 @@ console.log('Input adapter');
         'drain hands the fixed step exactly what arrived',
         swipes.drain() === 2 && swipes.pending === 0,
     );
+
+    // Regression: a held button/finger trembles a pixel or two, and those
+    // segments used to open the gate — so a stationary pointer cut whatever
+    // drifted under it, farming combo and score.
+    const restTarget = new FakeTarget();
+    const restInput = new Input(restTarget as unknown as HTMLElement, project);
+    const restSwipes = new Swipes(SWIPE.gateDistance);
+    let restSegments = 0;
+    restInput.onSwipe((s) => {
+        restSegments += 1;
+        restSwipes.push(s);
+    });
+    restInput.onStrokeStart(() => restSwipes.beginStroke());
+
+    fire(restTarget, 'pointerdown', { clientX: 400, clientY: 300 });
+    for (let index = 0; index < 240; index += 1) {
+        fire(restTarget, 'pointermove', {
+            clientX: 400 + (index % 2 === 0 ? 2 : -2),
+            clientY: 300 + (index % 3 === 0 ? 1 : 0),
+        });
+    }
+    check('a held pointer tremor emits no segments', restSegments === 0, `got=${restSegments}`);
+    check(
+        'a held pointer tremor never opens the gate',
+        !restSwipes.live && restSwipes.pending === 0,
+        `pending=${restSwipes.pending}`,
+    );
+
+    // The floor must not swallow slow deliberate drags: it accumulates from the
+    // last emitted sample, so 2px steps add up to one segment.
+    const slowTarget = new FakeTarget();
+    const slowInput = new Input(slowTarget as unknown as HTMLElement, project);
+    let slowSegments = 0;
+    slowInput.onSwipe(() => {
+        slowSegments += 1;
+    });
+    fire(slowTarget, 'pointerdown', { clientX: 400, clientY: 300 });
+    for (let x = 402; x <= 406; x += 2) {
+        fire(slowTarget, 'pointermove', { clientX: x, clientY: 300 });
+    }
+    check('a slow drag emits once it crosses the floor', slowSegments === 1, `got=${slowSegments}`);
 }
 
 if (failures > 0) {

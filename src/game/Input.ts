@@ -19,8 +19,12 @@ export type StrokeStartHandler = (world: Vector3) => void;
 export type StrokeMoveHandler = (world: Vector3) => void;
 export type StrokeEndHandler = () => void;
 
-// Sub-pixel jitter from a resting finger; ignored so we don't emit stubs.
-const MIN_SEGMENT_NDC = 0.004;
+// A resting finger, or a hand holding a mouse button, trembles a pixel or two.
+// Anything shorter than this is noise, not a swipe — and because the sample is
+// compared against the last *emitted* point, jitter around a fixed spot never
+// adds up, while a slow deliberate drag still emits once it crosses the floor.
+// CSS pixels, not NDC: the floor must mean the same on a phone and a desktop.
+const MIN_SEGMENT_PX = 6;
 
 /**
  * Pointer input, normalised to swipe segments.
@@ -47,6 +51,7 @@ export class Input {
     // a layout flush, and a resize mid-swipe is not a case worth paying for.
     #rect: DOMRect | null = null;
 
+    /** CSS-pixel positions; only converted to NDC when projecting. */
     #previous = new Vector2();
     #current = new Vector2();
     #from = new Vector3();
@@ -117,13 +122,13 @@ export class Input {
 
         this.#pointerId = event.pointerId;
         this.#rect = this.#target.getBoundingClientRect();
-        if (!this.#toNdc(event, this.#previous)) return;
+        if (!this.#toPixels(event, this.#previous)) return;
 
         // Capture keeps the stroke alive if the finger leaves the canvas, which
         // is the normal case for a full-screen swipe.
         this.#target.setPointerCapture(event.pointerId);
         this.#hasPrevious = true;
-        this.#project(this.#previous.x, this.#previous.y, this.#from);
+        this.#projectPixels(this.#previous, this.#from);
         for (const handler of this.#strokeStartHandlers) {
             handler(this.#from);
         }
@@ -156,14 +161,14 @@ export class Input {
     };
 
     #emit(event: PointerEvent): void {
-        if (!this.#toNdc(event, this.#current)) return;
+        if (!this.#toPixels(event, this.#current)) return;
 
-        if (this.#current.distanceToSquared(this.#previous) < MIN_SEGMENT_NDC * MIN_SEGMENT_NDC) {
+        if (this.#current.distanceToSquared(this.#previous) < MIN_SEGMENT_PX * MIN_SEGMENT_PX) {
             return;
         }
 
-        this.#project(this.#previous.x, this.#previous.y, this.#from);
-        this.#project(this.#current.x, this.#current.y, this.#to);
+        this.#projectPixels(this.#previous, this.#from);
+        this.#projectPixels(this.#current, this.#to);
         this.#previous.copy(this.#current);
 
         for (const handler of this.#strokeMoveHandlers) {
@@ -177,14 +182,16 @@ export class Input {
         }
     }
 
-    #toNdc(event: PointerEvent, out: Vector2): boolean {
+    #toPixels(event: PointerEvent, out: Vector2): boolean {
         const rect = this.#rect ?? this.#target.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return false;
 
-        out.set(
-            ((event.clientX - rect.left) / rect.width) * 2 - 1,
-            -(((event.clientY - rect.top) / rect.height) * 2 - 1),
-        );
+        out.set(event.clientX - rect.left, event.clientY - rect.top);
         return true;
+    }
+
+    #projectPixels(point: Vector2, out: Vector3): void {
+        const rect = this.#rect ?? this.#target.getBoundingClientRect();
+        this.#project((point.x / rect.width) * 2 - 1, -((point.y / rect.height) * 2 - 1), out);
     }
 }

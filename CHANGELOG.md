@@ -4,6 +4,19 @@ Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log
 
 ## 2026-10-26
 
+### A held pointer no longer slices
+
+- Bug: holding touch/mousedown farmed combo and score — the blade kept
+  cutting fruit that drifted under a stationary pointer.
+- `game/Input.ts`: jitter floor is now **6 CSS px** (`MIN_SEGMENT_PX`, was
+  0.004 NDC ≈ 1 px). A resting hand trembles 1–3 px, and the old floor emitted
+  a segment per frame, which also fed the gate.
+- `game/Swipes.ts`: gate measures **distance from the stroke origin**, not
+  accumulated path length — scrubbing back and forth covered distance without
+  displacing, so a held pointer opened the gate on its own.
+- `verify:swipe` 47 → 51 checks (tremor emits nothing, tremor never opens the
+  gate, slow drag still emits, scrubbing in place stays shut).
+
 ### Dev overlays opt-in
 
 - stats.js meter + playfield guide rect now require `?dev` on the dev server

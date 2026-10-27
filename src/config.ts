@@ -66,8 +66,8 @@ export const SPAWN = {
 // must travel `gateDistance` world units (on the play plane) before its
 // segments count, so taps and resting-finger drift never slice. Once open,
 // the gate stays open until the stroke ends — a slow deliberate drag keeps
-// cutting. Sub-pixel jitter is already filtered upstream (Input's
-// MIN_SEGMENT_NDC); this is the coarser second line, tuned by eye [You].
+// cutting. Resting-finger jitter is already filtered upstream (Input's
+// MIN_SEGMENT_PX); this is the coarser second line, tuned by eye [You].
 export const SWIPE = {
     /** Stroke travel before segments count, world units on the play plane. */
     gateDistance: 0.5,

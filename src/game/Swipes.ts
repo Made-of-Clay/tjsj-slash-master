@@ -10,9 +10,11 @@ import type { SwipeSegment } from './Input';
  * allocation), so step 5's collision can test segments against sim state from
  * inside the step, deterministic with respect to render timing.
  *
- * **Gating (4B).** A stroke goes live once the pointer has travelled
- * `gateDistance` world units; segments before that are dropped, so a tap or a
- * resting finger never slices. Once live the stroke stays live until it ends —
+ * **Gating (4B).** A stroke goes live once the pointer is `gateDistance` world
+ * units away from where the stroke started; segments before that are dropped,
+ * so a tap or a resting finger never slices. Distance from the origin, not
+ * accumulated path length — a held finger trembles back and forth, and a
+ * path-length gate opens on that alone. Once live the stroke stays live until it ends —
  * a slow deliberate drag keeps cutting (Fruit-Ninja behaviour). The segment
  * that opens the gate is buffered whole: it may start short of the threshold,
  * but segment chains stay contiguous (each `from` = previous `to`).
@@ -29,16 +31,15 @@ export class Swipes {
     /** Next slot to hand to a drain handler. */
     #read = 0;
     #pending = 0;
-    /** Pointer travel in the current stroke, counted since the gate last closed. */
-    #traveled = 0;
+    /** First sample of the current stroke; the gate measures distance from it. */
+    readonly #origin = new Vector3();
+    #hasOrigin = false;
     /** Gate state: opens at `#gateDistance`, closes on the next stroke boundary. */
     #live = false;
-    /** Monotonic stroke id (step 9B): combo identity, never reset by clear(). */
-    #stroke = 0;
 
     /**
-     * @param gateDistance stroke travel before segments count, world units on
-     *   the play plane (0 = ungated)
+     * @param gateDistance displacement from the stroke origin before segments
+     *   count, world units on the play plane (0 = ungated)
      * @param capacity ring size, in segments
      */
     constructor(gateDistance: number, capacity = 32) {
@@ -60,15 +61,9 @@ export class Swipes {
         return this.#live;
     }
 
-    /** Id of the latest stroke; advances on `beginStroke` only. */
-    get stroke(): number {
-        return this.#stroke;
-    }
-
     /** Stroke boundary (`Input.onStrokeStart`): the gate opens from zero again. */
     beginStroke(): void {
-        this.#stroke += 1;
-        this.#traveled = 0;
+        this.#hasOrigin = false;
         this.#live = false;
     }
 
@@ -77,7 +72,7 @@ export class Swipes {
      * segments must still reach the next fixed step, so the ring is untouched.
      */
     endStroke(): void {
-        this.#traveled = 0;
+        this.#hasOrigin = false;
         this.#live = false;
     }
 
@@ -88,10 +83,12 @@ export class Swipes {
      * dropped — a stale miss matters least.
      */
     push(segment: SwipeSegment): void {
-        this.#traveled += segment.from.distanceTo(segment.to);
-
         if (!this.#live) {
-            if (this.#traveled < this.#gateDistance) return;
+            if (!this.#hasOrigin) {
+                this.#origin.copy(segment.from);
+                this.#hasOrigin = true;
+            }
+            if (this.#origin.distanceTo(segment.to) < this.#gateDistance) return;
             this.#live = true;
         }
 
