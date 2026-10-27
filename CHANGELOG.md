@@ -4,6 +4,21 @@ Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log
 
 ## 2026-10-26
 
+### Step 10 — built default + boot override
+
+- `content/themes/index.ts`: `VITE_DEFAULT_THEME` read through
+  `import.meta.env` (optional-chained, registry-validated, `halloween`
+  fallback); `define` dropped — Vite 8 dev ignores it. `resolveDefaultThemeId`
+  replaces the `resolveBootThemeId` alias.
+- `main.ts`: `?theme=` resolved once at boot; log
+  `theme: <id> (url|fallback|default)`; `theme-color` follows the resolved
+  theme.
+- `vite.config.ts`: imports the theme registry; manifest `theme_color` uses the
+  built theme's `background.top`. `loadEnv(mode, '.', '')` avoids untyped
+  `process.cwd()`.
+- `verify:content` 133 → 143 checks; selection block moved above the failure
+  gate (it previously ran after the summary and could not fail).
+
 ### A held pointer no longer slices
 
 - Bug: holding touch/mousedown farmed combo and score — the blade kept

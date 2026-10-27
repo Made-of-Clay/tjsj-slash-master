@@ -122,6 +122,10 @@ Step 9 adds no assets: sound is synthesised in `audio/Audio.ts`, sparks are one
 instanced unit shard, the hint cards are DOM. The +3.2 kB gzip is code — above
 the ~2.5 kB hope, kept because the alternative was cutting feel.
 
+Step 10 adds no assets and no frame-path work: one build-time env read, both
+theme registries stay in the bundle by design. App chunk +0.45 kB
+(0.14 kB gzip) over step 9.
+
 Guard rails learned the hard way at the foundation:
 
 - **Never import `three/examples/jsm/Addons.js`.** It is a 297-module barrel;

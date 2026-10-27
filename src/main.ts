@@ -98,8 +98,15 @@ async function boot(): Promise<void> {
     // Dev-only overlays are opt-in (`?dev`): the stats meter and the playfield
     // guide otherwise sit on top of the HUD controls.
     const devTools = import.meta.env.DEV && params.has('dev');
-    const theme = getTheme(resolveThemeId(params.get('theme')));
-    console.info(`theme: ${theme.id}`);
+    const urlTheme = params.get('theme');
+    const theme = getTheme(resolveThemeId(urlTheme));
+    const themeSource = urlTheme === null ? 'default' : theme.id === urlTheme ? 'url' : 'fallback';
+    console.info(`theme: ${theme.id} (${themeSource})`);
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta instanceof HTMLMetaElement) {
+        themeColorMeta.content = theme.background.top;
+    }
 
     const scene = createScene(theme);
 

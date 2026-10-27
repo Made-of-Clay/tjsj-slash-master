@@ -29,7 +29,13 @@ import { BoxGeometry, Vector3 } from 'three/webgpu';
 import type { BufferGeometry } from 'three/webgpu';
 import { OBJECT_MATERIAL, PLAYFIELD } from '../src/config.ts';
 import type { GameObjectDefinition, ObjectModel, Theme } from '../src/content/types.ts';
-import { DEFAULT_THEME_ID, getTheme, resolveThemeId, THEMES } from '../src/content/themes/index.ts';
+import {
+    DEFAULT_THEME_ID,
+    getTheme,
+    resolveDefaultThemeId,
+    resolveThemeId,
+    THEMES,
+} from '../src/content/themes/index.ts';
 import type { ThemeId } from '../src/content/themes/index.ts';
 import { boxBoundingRadius } from '../src/game/SpawnedObject.ts';
 import { bakeModel } from '../src/rendering/Model.ts';
@@ -403,6 +409,38 @@ check(
     'restricted emissive reads stronger than target',
     OBJECT_MATERIAL.restrictedEmissive > OBJECT_MATERIAL.targetEmissive,
 );
+
+// ===== step 10: built default + boot-only override =====
+console.log('Selection');
+{
+    check('DEFAULT_THEME_ID is a registry key', Object.hasOwn(THEMES, DEFAULT_THEME_ID));
+
+    check(
+        "resolveThemeId('christmas') wins over default",
+        resolveThemeId('christmas') === 'christmas',
+    );
+    check("resolveThemeId('halloween') is exact", resolveThemeId('halloween') === 'halloween');
+
+    for (const value of [null, undefined, '', 'nope', 'Christmas']) {
+        check(
+            `unknown ${JSON.stringify(value) ?? 'undefined'} falls back to DEFAULT_THEME_ID`,
+            resolveThemeId(value) === DEFAULT_THEME_ID,
+        );
+    }
+
+    check(
+        'resolveDefaultThemeId honours the injected build value',
+        resolveDefaultThemeId('christmas') === 'christmas' &&
+            resolveDefaultThemeId('halloween') === 'halloween' &&
+            resolveDefaultThemeId('nope') === 'halloween' &&
+            resolveDefaultThemeId(undefined) === 'halloween',
+    );
+
+    check(
+        'both themes reachable from one build',
+        Object.keys(THEMES).includes('halloween') && Object.keys(THEMES).includes('christmas'),
+    );
+}
 
 if (failures > 0) {
     throw new Error(`${failures} content check(s) failed`);

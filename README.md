@@ -22,6 +22,7 @@ Docs:
 - [`docs/PLAN-STEP-7-content.md`](docs/PLAN-STEP-7-content.md) — step 7 plan
 - [`docs/PLAN-STEP-8-perf.md`](docs/PLAN-STEP-8-perf.md) — step 8 plan
 - [`docs/PLAN-STEP-9-polish.md`](docs/PLAN-STEP-9-polish.md) — step 9 plan
+- [`docs/PLAN-STEP-10-content.md`](docs/PLAN-STEP-10-content.md) — step 10 plan
 - [`docs/PERF-BUDGET.md`](docs/PERF-BUDGET.md) — frame, allocation and payload budgets, and how to measure
 
 Stack:
@@ -44,9 +45,10 @@ Run dev mode
 pnpm dev
 ```
 
-Append `?theme=christmas` to boot the Christmas theme; unknown ids fall back
-to Halloween. Append `?dev` (dev server only) for the stats.js FPS meter and
-the playfield guide overlay.
+Theme: default is built (`VITE_DEFAULT_THEME=halloween|christmas`), override via
+`?theme=halloween|christmas` at boot (reload to change). Unknown ids fall back
+to the built default. Append `?dev` (dev server only) for the stats.js FPS meter
+and the playfield guide overlay.
 
 Foundation checks (loop, input, pool, swipe projector)
 
