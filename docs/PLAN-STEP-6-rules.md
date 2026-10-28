@@ -1,16 +1,13 @@
 # Step 6 — Game rules
 
-Plan for [PLAN.md](../PLAN.md) §6. Extends it, doesn't replace it.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: a 30 s round wraps the sim — a countdown clock finally drives the
-  spawn ramp (`progress` un-stubbed), score + timer HUD, game-over card with
-  final score and restart. **No start/pause screen, no miss penalty** — PLAN §6
-  says missed fruit has no consequence; start screens are step 9.
-- Target: the MVP milestone line from PLAN.md — a complete arcade loop:
-  launch → slice → score → time up → final score → restart.
-
-Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
-Workstreams run **sequentially A → B → C → D**; sessions: A | B | C+D.
+- **Scope** — a 30 s round wraps the sim: clock, score + timer HUD, game-over card, full restart.
+- **Contracts** — `Round` is scalar state with an `over` latch; `round.step` runs last in `fixedUpdate`; HUD writes only on an integer change; restart re-arms every mutable system; missed fruit has no penalty.
+- **Files** — `game/Round.ts`, `ui/hud.ts`, `style.css`, `main.ts`.
+- **Acceptance** — `verify:rules` (round, reset, ramp, combo); no cut lands after the buzzer; round 2 behaves exactly like round 1.
+- **Not doing** — start/pause, best score, combos, sound, miss penalty.
+- **Decisions** — 6A–6F.
 
 > **Status note.** The seams already exist: `Score` (`total/add/reset`), the
 > `spawner.step(..., progress)` argument stubbed at 0 in `main.ts`, and an
@@ -39,6 +36,8 @@ Workstreams run **sequentially A → B → C → D**; sessions: A | B | C+D.
    state, or round 2 is silently different from round 1.
 
 ## Decisions (locked 2026-10-21)
+
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
 
 | #   | Decision           | Choice                                                                                                                                                                                            | Rationale                                                                            |
 | --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |

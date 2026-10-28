@@ -1,25 +1,17 @@
 # Step 10 — Content pipeline: built default + query-param switcher
 
-Plan for [PLAN.md](../PLAN.md) §10. Extends steps 7–9, doesn't replace them.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: close §10 with **exactly two selection paths** — the default compiled
-  into the build, and a boot-time `?theme=` override. **No** runtime hot-swap,
-  **no** `setTheme()` API, **no** picker UI, **no** persistence.
-- Target: one build can ship either theme as its default (changing one build
-  value, no code edit), and any deployed build can still be previewed/shared as
-  the other theme via `?theme=christmas` or `?theme=halloween`. Unknown or
-  absent values fall back to the built default. Adding a theme stays
-  data + one registry entry, with **zero** gameplay changes.
-- Not in scope: `setTheme(id)` / ThemeManager / view disposal+rebuild / dev
-  switcher / remembered choice (`localStorage`), asset loading (glTF, textures),
-  per-theme HUD re-skin, analytics.
+- **Scope** — the built default theme plus a boot-time `?theme=` override; exactly two selection paths.
+- **Contracts** — default from `import.meta.env.VITE_DEFAULT_THEME`; invalid or absent → `halloween`; the override is read once in `main.ts` before any view exists; both themes stay in the bundle; no runtime API.
+- **Files** — `content/themes/index.ts`, `src/main.ts`, `index.html`, `vite.config.ts`, `scripts/verify-content.ts`.
+- **Acceptance** — `verify:content` selection checks; boot logs `theme: <id> (url|fallback|default)`; `theme-color` and the manifest match the resolved and built themes.
+- **Not doing** — picker, persistence, hot swap, per-theme HUD, tree-shaking a theme out.
+- **Decisions** — 10A–10J.
 
-Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
-
-> **Status.** A + B **implemented + verified (uncommitted)** 2026-10-26: built
-> default + boot override + 10 `verify-content` checks, all review findings
-> below resolved. Step 7 already shipped `getTheme` / `resolveThemeId` / `?theme=`
-> and the two-theme registry.
+> **Status.** A + B landed in `53ba445` (2026-10-27): built default + boot
+> override + selection checks, all review findings below resolved. Step 7
+> already shipped `getTheme` / `resolveThemeId` / `?theme=` and the registry.
 
 ## What step 10 is really about
 
@@ -41,6 +33,8 @@ Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
    does.
 
 ## Decisions (locked 2026-10-26, [You])
+
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
 
 | #   | Decision              | Choice                                                                                                                                                                                                   | Rationale                                                                             |
 | --- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |

@@ -21,7 +21,9 @@
     "verify:rules": "bun scripts/verify-rules.ts",
     "verify:content": "bun scripts/verify-content.ts",
     "verify:perf": "bun scripts/verify-perf.ts",
-    "verify:polish": "bun scripts/verify-polish.ts"
+    "verify:polish": "bun scripts/verify-polish.ts",
+    "verify": "bun run verify:foundation && bun run verify:playfield && bun run verify:launch && bun run verify:swipe && bun run verify:cut && bun run verify:rules && bun run verify:content && bun run verify:perf && bun run verify:polish && bun run verify:docs",
+    "verify:docs": "bun scripts/verify-docs.ts"
   },
   "dependencies": {
     "stats.js": "^0.17.0",

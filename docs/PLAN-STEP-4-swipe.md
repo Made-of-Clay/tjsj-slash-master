@@ -1,12 +1,13 @@
 # Step 4 — Swipe system
 
-Plan for [PLAN.md](../PLAN.md) §4. Extends it, doesn't replace it.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: swipes become world-space segments the fixed-step sim can consume deterministically, with tap/drift gating. **No collision test, no slicing** — that's step 5 (`Collision` consumes pooled objects + `radius`, Decision 3B sphere-vs-segment).
-- Target: step 5 can start its session by reading `swipes.drain()` inside `fixedUpdate` and testing segments against pool slots.
-
-Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
-Workstreams run **sequentially A → B → C → D → E**, one per session.
+- **Scope** — pointer strokes become world-space segments consumed per fixed step, with tap/drift gating.
+- **Contracts** — the buffer owns copies; drain at the top of `fixedUpdate`; unconsumed segments die there; the gate opens once at `SWIPE.gateDistance` from the stroke origin; `Input` stays DOM-only.
+- **Files** — `game/Swipes.ts`, `Input.ts`, `main.ts`.
+- **Acceptance** — `verify:swipe` (buffer, gate, copy, cancelStroke); taps and resting fingers never cut; a held pointer never re-gates.
+- **Not doing** — hit test, slicing, trail polish.
+- **Decisions** — 4A–4G.
 
 > **Status note.** The DOM adapter and trail visual landed early (step 3): `Input`
 > already emits world-space `SwipeSegment`s and `BladeTrail` draws them. Step 4 is
@@ -26,6 +27,8 @@ Workstreams run **sequentially A → B → C → D → E**, one per session.
 3. **Copy semantics debt.** `Input`'s `SwipeSegment.from/to` are reused instances — handlers "must copy them if they keep the values past the call". Step 5 will keep them, so the buffer step 4 builds owns its vectors.
 
 ## Decisions (proposed — lock at session 1)
+
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
 
 | #   | Decision         | Proposal                                                                                                                                                                                                         | Rationale                                                                                                                                                                                                    |
 | --- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

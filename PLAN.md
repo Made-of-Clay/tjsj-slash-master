@@ -1,239 +1,55 @@
-## Fruit Ninja–style 3D Game Plan
+# Plan — Fruit-Ninja-style slicer
 
-**Core architecture:** separate **gameplay**, **rendering**, and **content/theme data** so Halloween → Christmas → anything else requires mostly swapping data/assets.
+Gameplay / rendering / content are separate: a theme is data plus one registry entry. This file is the **index**, not the spec. Read it, pick one router row, stop. Depth lives in the linked docs and is never repeated here.
 
-### 1. Project foundation
+## Invariants — gate every task
 
-- Vite + TypeScript
-- Three.js + TSL
-- pnpm
-- Oxlint + Oxfmt
-- PWA
-- Mobile + desktop input
-- Establish performance budget:
-  - Target 60 FPS
-  - Minimize allocations during gameplay
-  - Object pooling
-  - Avoid unnecessary post-processing
+- `src/game/**` never imports `content/themes`, `content/models` or `rendering/`.
+- Numbers live in `src/config.ts` or theme data; no magic numbers in code.
+- Fixed-step sim, zero steady-frame allocation, pool never grows.
+- Play plane `z = 0`; hit tests are 3D sphere-vs-segment.
+- No dependencies beyond three + stats.js; no binary assets — procedural art, synthesised audio.
+- Draw ceiling ≤ 17 while swiping.
 
-**Structure**
+## Router — read only what the task touches
 
-```
-src/
-  game/
-    Game.ts
-    GameLoop.ts
-    Input.ts
-    Spawner.ts
-    Physics.ts
-    Collision.ts
-    Score.ts
-  rendering/
-    Scene.ts
-    Camera.ts
-    Materials.ts
-  content/
-    themes/
-      halloween.ts
-      christmas.ts
-    objects/
-  ui/
-  main.ts
-```
+| Task signal                                | Read                                                                            |
+| ------------------------------------------ | ------------------------------------------------------------------------------- |
+| build, renderer, loop, input, pool, PWA    | [step 1](docs/PLAN-STEP-1-foundation.md) · 1A–1D                                |
+| camera, aspect, background, lights, bounds | [step 2](docs/PLAN-STEP-2-playfield.md) · 2A–2E                                 |
+| spawn, arc, gravity, despawn, ramp         | [step 3](docs/PLAN-STEP-3-launching.md) · 3A–3F                                 |
+| pointer, stroke, gate, segment buffer      | [step 4](docs/PLAN-STEP-4-swipe.md) · 4A–4G                                     |
+| hit test, cut, score, debris               | [step 5](docs/PLAN-STEP-5-cutting.md) · 5A–5E                                   |
+| round, timer, HUD, restart                 | [step 6](docs/PLAN-STEP-6-rules.md) · 6A–6F                                     |
+| theme, models, bake, import graph          | [step 7](docs/PLAN-STEP-7-content.md) · 7A–7L                                   |
+| draws, instancing, allocation, fps         | [step 8](docs/PLAN-STEP-8-perf.md) · 8A–8J · [PERF-BUDGET](docs/PERF-BUDGET.md) |
+| feel, sparks, shake, combo, audio, flow    | [step 9](docs/PLAN-STEP-9-polish.md) · 9A–9L                                    |
+| default theme, `?theme=`, manifest         | [step 10](docs/PLAN-STEP-10-content.md) · 10A–10J                               |
+| **numbers / feel tuning**                  | [TUNABLES](docs/TUNABLES.md) — nothing else                                     |
+| **why a choice was made**                  | [DECISIONS](docs/DECISIONS.md) — grep the ID, e.g. `9C`                         |
+| **what is done / next / blocked**          | [STATE](STATE.md)                                                               |
 
-### 2. MVP playfield
+## Reading by task class
 
-- Fixed 3D camera
-- Orthographic or modest perspective camera
-- Background
-- Lighting/material setup
-- Play area bounds
-- Responsive viewport
+| Class   | Reads                                                                     |
+| ------- | ------------------------------------------------------------------------- |
+| tuning  | `TUNABLES` only. No step doc, no history.                                 |
+| bugfix  | router row → that doc's **Contracts** + **Acceptance** + tagged harness.  |
+| feature | router row whole + cited decision IDs + the neighbouring doc's Contracts. |
+| docs    | this file + the doc being edited.                                         |
 
-### 3. Object launching
+Every step doc opens with the same six fields — `Scope`, `Contracts`, `Files`, `Acceptance`, `Not doing`, `Decisions` — so the first 15 lines answer most questions without the body.
 
-Start with **cubes**.
+## Steps
 
-Each spawned object gets:
+Order is history, not a reading list. Router decides what to open.
 
-```ts
-interface SpawnedObject {
-  // can use different name; just an example
-  position;
-  velocity;
-  rotation;
-  angularVelocity;
-  type;
-  active;
-}
-```
+1 foundation · 2 playfield · 3 launching · 4 swipe · 5 cutting · 6 rules · 7 content · 8 perf · 9 polish · 10 content pipeline
 
-Simple ballistic physics:
+## Verify
 
-```
-position += velocity * dt
-velocity.y += gravity * dt
-rotation += angularVelocity * dt
-```
+`pnpm verify` runs every harness, foundation → polish, then `verify:docs`. Ship-check adds `npx tsc --noEmit`, `npx oxlint`, `npx vite build`. `pnpm verify:docs` guards the doc budgets, links and headers.
 
-Spawn trajectories:
+## Archive
 
-- Mostly bottom → upward/forward
-- Random horizontal position
-- Random launch velocity
-- Random depth/distance
-- Variable arc
-- Occasional side launches
-
-No physics engine initially.
-
-### 4. Swipe system
-
-Desktop:
-
-- `pointerdown`
-- `pointermove`
-- `pointerup`
-
-Mobile:
-
-- Same Pointer Events API
-
-Represent swipe as a short-lived 3D/world-space line segment.
-
-```
-previousPointer → currentPointer
-             ↓
-        slice segment
-```
-
-### 5. Cutting
-
-MVP collision:
-
-- Test swipe segment against object's bounding sphere/box.
-- If intersecting:
-
-  - Mark object sliced
-  - Award points
-  - Spawn simple sliced visual (2 smaller cubes to start?)
-  - Set new velocity and direction of "sliced" parts according to slice direction and velocity at slice
-  - Remove/recycle original
-
-Don't implement physically accurate mesh slicing yet.
-
-### 6. Game rules
-
-- 30-second round
-- Objects:
-
-  - `fruit` → +1
-  - `restricted` → -1
-
-- Missed fruit initially has no consequence.
-- Score displayed continuously.
-- Timer displayed.
-- Game-over screen:
-
-  - Final score
-  - Restart
-
-### 7. Content/theme abstraction
-
-Gameplay should know nothing about pumpkins, apples, snowmen, etc.
-
-```ts
-interface GameObjectDefinition {
-  id: string;
-  score: number;
-  category: "target" | "restricted";
-  model: ObjectModel;
-}
-```
-
-Theme:
-
-```ts
-interface Theme {
-  background: ...
-  objects: GameObjectDefinition[]
-  spawnRules: ...
-}
-```
-
-Halloween could eventually contain:
-
-```
-pumpkin       +1
-candy         +1
-ghost         +1
-skull         -1
-```
-
-Christmas:
-
-```
-ornament      +1
-candyCane     +1
-gift          +1
-snowGlobe     -1
-```
-
-### 8. Performance pass
-
-After MVP works:
-
-- `InstancedMesh` where appropriate
-- Object pools
-- Reuse vectors/quaternions/arrays
-- Avoid per-frame garbage
-- Frustum culling
-- Low-poly models
-- Texture atlases where useful
-- TSL materials instead of expensive shader complexity
-- Device pixel-ratio cap
-- Pause rendering when tab/backgrounded
-- Measure with Chrome Performance + FPS meter
-
-### 9. Polish
-
-Then add:
-
-- Better slicing animation
-- Juice/explosion particles
-- Screen shake
-- Combo scoring
-- Sound
-- Haptics
-- Better trajectories
-- Increasing difficulty
-- Special objects
-- Start/pause screens
-- High score
-- Installable PWA
-
-### 10. Content pipeline
-
-Eventually make adding a theme essentially:
-
-```ts
-setTheme(halloween);
-```
-
-or:
-
-```ts
-setTheme(christmas);
-```
-
-with **zero changes to gameplay code**.
-
----
-
-## MVP milestone
-
-**The first playable version should contain only:**
-
-> 3D background → cubes launch → cubes arc toward/through camera → pointer/finger swipe → cube gets hit → `+1` → restricted cube gives `-1` → 30-second timer → final score → restart.
-
-I'd build **Steps 1–3 first**, then get a playable physics loop running before touching slicing, UI polish, or TSL effects.
+[PLAN-ORIGINAL](docs/PLAN-ORIGINAL.md) holds the first brief verbatim. Read it for intent only; it never describes current behaviour.

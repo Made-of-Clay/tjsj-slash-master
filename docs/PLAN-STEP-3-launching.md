@@ -1,12 +1,13 @@
 # Step 3 — Object launching
 
-Plan for [PLAN.md](../PLAN.md) §3. Extends it, doesn't replace it.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: cubes launch, fly ballistic arcs, despawn. No slicing (step 5), no rules/UI (step 6).
-- Target: real work for the fixed-step sim; step 4–5 consume live objects + the pool.
-
-Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
-Workstreams run **sequentially A → B → C → D → E**, one per session.
+- **Scope** — pooled objects launch on guaranteed arcs, integrate ballistically, despawn.
+- **Contracts** — latest-state render, no interpolation; depth pinned `z = 0` (3B); radius ≤ `sideMargin`; an `undefined` acquire is a skip, not an error.
+- **Files** — `game/SpawnedObject.ts`, `Physics.ts`, `Spawner.ts`, `rendering/ObjectViews.ts`, `content/types.ts`.
+- **Acceptance** — `verify:launch` (aim, integration, despawn, weighted pick); arcs peak inside the frame on portrait; cadence follows `round.progress`.
+- **Not doing** — slicing, rules, UI, instancing.
+- **Decisions** — 3A–3F (3E replaced constant cadence on 2026-10-18).
 
 > **Course correction (2026-10-18, [You], workstream C).** Decision E is
 > overridden: spawn cadence and batch size now **ramp with round progress**
@@ -29,6 +30,8 @@ Workstreams run **sequentially A → B → C → D → E**, one per session.
    velocity that guarantees the arc. Random velocity produces off-screen arcs on phones.
 
 ## Decisions (proposed — lock at session 1)
+
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
 
 | #   | Decision      | Proposal                                                                                                                                               | Rationale                                                                                                                            |
 | --- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |

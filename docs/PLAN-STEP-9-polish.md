@@ -1,19 +1,13 @@
 # Step 9 — Polish
 
-Plan for [PLAN.md](../PLAN.md) §9. Extends it, doesn't replace it.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: the feel layer — slice feedback, combo scoring, hazards, sound,
-  haptics, start/pause screens, high score. Rules and content structure stay
-  as steps 3–8 left them; this step adds juice, not systems.
-- Target: a round that feels finished — every cut answers with sparks, a
-  shake, a sound and (on supported devices) a buzz; multi-cut swipes pay a
-  combo; a hazard punishes a careless swipe; the round starts on purpose and
-  can be paused; the best score survives a reload.
-- Not in step 9: runtime theme swap / `setTheme` (step 10), texture atlases /
-  glTF, audio files or any new dependency, multiplayer/sharing, analytics.
-
-Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
-Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
+- **Scope** — the feel layer: sparks, shake, combo, hazards, audio, haptics, start/pause flow, records.
+- **Contracts** — presentation hangs off the existing cut event; no new per-frame allocation; draw ceiling 17; hazards never end the round; audio unlocks inside the gesture; combo is keyed on sim time, not the pointer.
+- **Files** — `game/Effects.ts`, `Combo.ts`, `rendering/SparkViews.ts`, `Shake.ts`, `audio/Audio.ts`, `ui/*`.
+- **Acceptance** — `verify:polish` plus content/perf/rules updates; a 4-cut chain pays 6 × `COMBO.step`; a hazard costs points only; best score persists; pause freezes the sim, not the render.
+- **Not doing** — theme swap, assets, accounts, LOD, post-processing.
+- **Decisions** — 9A–9L.
 
 > **Status.** COMPLETE 2026-10-25 — A `e326074` · B `bba7c4d` · C `0bf9428`
 > · D (flow + close-out). Each session ended with the full chain
@@ -36,6 +30,8 @@ Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
    the hidden-tab pause in `GameLoop` remains the authority underneath.
 
 ## Decisions (step 9, locked 2026-10-25, [You])
+
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
 
 | #   | Decision     | Choice                                                                                                                                                                                                                | Rationale                                                                                                                                                                               |
 | --- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

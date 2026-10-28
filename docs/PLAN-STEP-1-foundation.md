@@ -1,11 +1,17 @@
 # Step 1 — Project foundation
 
-Plan for [PLAN.md](../PLAN.md) §1. Extends it, doesn't replace it.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: project foundation only. Steps 2–10 untouched.
-- Target: repo whose loop/input/pool/content contracts are settled, so step 2 drops in without rewrites.
+- **Scope** — foundation: WebGPU renderer, fixed-step loop, pointer input, pool, config, PWA shell, contracts for steps 2–10.
+- **Contracts** — `GameLoop` is the only frame driver; fixed step; no per-frame allocation; pool never grows; every tunable in `src/config.ts`.
+- **Files** — `src/game/GameLoop.ts`, `Input.ts`, `Pool.ts`, `src/config.ts`, `src/content/types.ts`, `docs/PERF-BUDGET.md`.
+- **Acceptance** — `verify:foundation` (loop steps, free-list, projector); build ships no decoders; stats.js reads 60.
+- **Not doing** — gameplay, theme art, any UI.
+- **Decisions** — 1A–1D.
 
 ## Decisions (locked)
+
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
 
 | #   | Decision                                                       | Rationale                                                                                                                                                                                             |
 | --- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

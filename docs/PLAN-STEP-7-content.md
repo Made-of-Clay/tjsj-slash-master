@@ -1,20 +1,13 @@
 # Step 7 — Content/theme abstraction
 
-Plan for [PLAN.md](../PLAN.md) §7 + §10. Extends them, doesn't replace them.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: gameplay stays theme-blind while the **art** becomes real — procedural
-  multi-part models baked into one vertex-coloured geometry per def, a second
-  theme (Christmas) swapped in with a URL parameter, and a harness that proves
-  the swap is data-only.
-- Target: `?theme=christmas` → different palette, lighting, models, names;
-  **zero** gameplay diffs. Score still +1 target / −1 restricted, round/HUD/
-  restart unchanged.
-- Not in scope: runtime hot-swap (step 10), glTF/texture payload (step 9),
-  sliced-half visuals for every object (step 9 "better slicing animation"),
-  theme-tinted HUD (step 9).
-
-Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
-Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
+- **Scope** — procedural multi-part models baked once, a second theme, and proof the swap is data-only.
+- **Contracts** — gameplay never imports `content/themes`, `content/models` or `rendering/`; one baked geometry per def; `main.ts` injects the theme; `asset` stays an unused seam.
+- **Files** — `content/types.ts`, `content/models/*`, `content/themes/*`, `rendering/Model.ts`, `Materials.ts`, `ObjectViews.ts`.
+- **Acceptance** — `verify:content` (theme, bake, isolation); `?theme=christmas` changes art only; every model radius ≤ `sideMargin`.
+- **Not doing** — runtime swap (10), glTF/textures, authored halves for every object.
+- **Decisions** — 7A–7L.
 
 > **Status note.** The seams already exist: `ObjectModel` (`model` + optional
 > `pieces`), `GameObjectDefinition` (`id/score/category`), `Theme`, the
@@ -47,6 +40,8 @@ Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
    accents, spawn rules, rules unchanged.
 
 ## Decisions (locked 2026-10-22, [You])
+
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
 
 | #   | Decision           | Choice                                                                                                                                                                         | Rationale                                                                                                       |
 | --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |

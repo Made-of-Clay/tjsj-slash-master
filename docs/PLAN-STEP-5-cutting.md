@@ -1,16 +1,13 @@
 # Step 5 — Cutting
 
-Plan for [PLAN.md](../PLAN.md) §5. Extends it, doesn't replace it.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: buffered swipe segments become cuts — sphere-vs-segment hit test against
-  live pooled objects, score awarded, two piece visuals fly apart, original
-  recycled. **No score display, no round timer** — step 6 (PLAN §6 owns UI and
-  rules together).
-- Target: the first interactive feedback loop. Swiping through an object on
-  screen makes it visibly split and moves the score.
-
-Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
-Workstreams run **sequentially A → B → C → D → E**; sessions: A | B+C | D+E.
+- **Scope** — segments cut pooled objects: hit test, score, two pieces, recycle.
+- **Contracts** — pure 3D sphere-vs-segment plus `CUT.pad`; the cut runs inside the drain, pre-move; score and pieces fire before `pool.release`; pieces are a debris ring, never the pool; one payout per object per drain.
+- **Files** — `game/Collision.ts`, `Slicer.ts`, `Score.ts`, `Debris.ts`, `rendering/DebrisViews.ts`, `config.ts`.
+- **Acceptance** — `verify:cut` (hit test, slicer, score, debris); a multi-segment stroke pays once; no allocation in the cut path.
+- **Not doing** — HUD or round (6), authored halves beyond the seam (7), instanced debris (8), juice (9).
+- **Decisions** — 5A–5E.
 
 > **Status note.** Step 4 landed the consumable input: `swipes.drain()` runs at
 > the top of `fixedUpdate` (pre-spawner/physics, Decision 4C), so cut tests see
@@ -43,6 +40,8 @@ Workstreams run **sequentially A → B → C → D → E**; sessions: A | B+C | 
    debris ring (Decision A) rather than reusing the object pool.
 
 ## Decisions (locked 2026-10-21, pre-session)
+
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
 
 | #   | Decision          | Choice                                                                                                                                                                                                                                  | Rationale                                                                                                                                                                              |
 | --- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

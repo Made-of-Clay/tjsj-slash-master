@@ -1,9 +1,13 @@
 # Step 2 — MVP playfield
 
-Plan for [PLAN.md](../PLAN.md) §2. Extends it, doesn't replace it.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: fixed camera, background, lighting/material setup, play area bounds, responsive viewport. Steps 3–10 untouched.
-- Target: a framed, bounded, themeable empty stage that step 3 can launch cubes into without rewriting anything.
+- **Scope** — fixed straight-on camera, TSL background, lights, play bounds, aspect policy.
+- **Contracts** — play plane `z = 0`; height fixed, width from aspect; camera distance constant; `sideMargin` covers the largest model radius.
+- **Files** — `rendering/Camera.ts`, `Scene.ts`, `Materials.ts`, `PlayArea.ts`, `src/config.ts`.
+- **Acceptance** — `verify:playfield` (fit, bounds, projector); no edge clipping at any aspect; one background source, `backgroundNode`.
+- **Not doing** — objects, input, HUD.
+- **Decisions** — 2A–2E (2B and 2D as shipped; superseded wording kept below as history).
 
 > **Course correction (2026-10-16, [You]).** Decision B flipped from
 > fit-bounds to **full-width**: the playfield now spans the screen width (with a
@@ -14,28 +18,27 @@ Plan for [PLAN.md](../PLAN.md) §2. Extends it, doesn't replace it.
 > reveal a wider field. The fit-bounds narrative below is kept as history; the
 > decisions table and AGENTS.md current state reflect the shipped policy.
 
-Owner tags: **[I]** assistant, **[You]** user, **[Pair]** I scaffold, you decide/tune.
-Workstreams run **sequentially A → B → C → D → E → F**, one per session. Each has a self-contained "Session start" block so a fresh session can begin without re-reading everything.
-
 ## What step 2 is really about
 
 PLAN.md lists five bullets; four are structurally done in step 1 (`rendering/Camera.ts` exists, `rendering/Scene.ts` has lights, viewport sync exists). The real work:
 
-1. **Hard problem: make the play area behave across aspect ratios.** A fixed camera + fixed FOV shows a *narrower* world slice on a portrait phone than on a desktop monitor. The shipped fix is **full-width**: hold the vertical design extent fixed, derive the width from the aspect, and keep the camera at a constant distance — so wide screens get a wider field rather than a letterboxed one.
+1. **Hard problem: make the play area behave across aspect ratios.** A fixed camera + fixed FOV shows a _narrower_ world slice on a portrait phone than on a desktop monitor. The shipped fix is **full-width**: hold the vertical design extent fixed, derive the width from the aspect, and keep the camera at a constant distance — so wide screens get a wider field rather than a letterboxed one.
 2. **Decision A — camera style:** straight-on modest perspective vs. the slight downward tilt step 1 has.
-3. **Decision B — aspect policy:** fit the arena with background margin *(original)* vs. fill the screen *(shipped, see course correction)*.
+3. **Decision B — aspect policy:** fit the arena with background margin _(original)_ vs. fill the screen _(shipped, see course correction)_.
 
 Two background sources currently fight: `Scene.background` (opaque color) **and** a CSS gradient behind the canvas. The canvas is opaque, so the CSS gradient is dead. Step 2 picks one source of truth.
 
 ## Decisions (locked)
 
-| # | Decision | Choice | Rationale |
-| - | -------- | ------ | --------- |
-| A | Camera | Straight-on modest perspective | Tilt's fit math is a trapezoid; not worth it before step 9. Keeps `z = 0` play plane view-perpendicular, so fit math is exact and testable. |
-| B | Aspect policy | **Full-width** (was fit-bounds) | Field spans the screen width; the fixed height keeps world scale identical across devices. Wide screens get a wider field, not background margin. `sideMargin` guards edge objects from clipping. |
-| C | Background | `scene.backgroundNode` (TSL) | Themeable, no extra geometry, exercises the TSL skill step 8 needs. Cost is one full-screen fragment (no post-processing). |
-| D | Play area proportions | **Height fixed, width derived from aspect** (was portrait-first `Wy > Wx`) | Height is the design dimension; width follows the viewport. Camera distance is constant, so it never lurches between orientations. |
-| E | Shadow maps | No | Matches `docs/PERF-BUDGET.md`. WebGPU node shadows need explicit setup and step 2 has no flat-scene problem to solve. |
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
+
+| #   | Decision              | Choice                                                                     | Rationale                                                                                                                                                                                         |
+| --- | --------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A   | Camera                | Straight-on modest perspective                                             | Tilt's fit math is a trapezoid; not worth it before step 9. Keeps `z = 0` play plane view-perpendicular, so fit math is exact and testable.                                                       |
+| B   | Aspect policy         | **Full-width** (was fit-bounds)                                            | Field spans the screen width; the fixed height keeps world scale identical across devices. Wide screens get a wider field, not background margin. `sideMargin` guards edge objects from clipping. |
+| C   | Background            | `scene.backgroundNode` (TSL)                                               | Themeable, no extra geometry, exercises the TSL skill step 8 needs. Cost is one full-screen fragment (no post-processing).                                                                        |
+| D   | Play area proportions | **Height fixed, width derived from aspect** (was portrait-first `Wy > Wx`) | Height is the design dimension; width follows the viewport. Camera distance is constant, so it never lurches between orientations.                                                                |
+| E   | Shadow maps           | No                                                                         | Matches `docs/PERF-BUDGET.md`. WebGPU node shadows need explicit setup and step 2 has no flat-scene problem to solve.                                                                             |
 
 Full-width reasoning (shipped): the vertical extent is fixed (`PLAYFIELD.halfHeight`), so it is always the binding fit dimension and the camera distance is the same on every aspect — no lurch. Width is derived as the visible width at the play plane minus `sideMargin`, so the field always reaches both screen edges without clipping edge objects.
 
@@ -76,10 +79,12 @@ CHANGELOG.md / README.md          entry + link                                  
 **Prerequisite:** none. This is the first session.
 
 ### Session start
+
 - Read: `src/config.ts` (CAMERA block), `src/rendering/Camera.ts`, `PLAN.md` §2.
 - Run: `pnpm dev`, confirm the placeholder sphere renders and `stats.js` reads ~60.
 
 ### Work
+
 - [I] Land the skeleton: structured `CAMERA` config block, pure `computeFitDistance(halfW, halfH, fovDeg, aspect)` + `applyFraming(camera, bounds, aspect)` in `Camera.ts`, reframe wired into `createViewportSync`, a DEV bounds rectangle so framing is visible.
 - [I] Make the camera straight-on: position `(0, cy, z)`, target `(0, cy, 0)` where `cy` is the vertical centre of `PLAY_BOUNDS`. Drop the step-1 tilt.
 - [You] Tune in `config.ts` with `pnpm dev` open:
@@ -89,9 +94,11 @@ CHANGELOG.md / README.md          entry + link                                  
 - [You] Decide the vertical placement: should the arena sit centred, or low with headroom for arcs?
 
 ### Success signal
+
 Bounds rectangle fully on-screen with no clipping at 21:9, 16:9, 4:3, 1:1, 3:4, 9:16, 9:19.5. Camera distance changes < ~15% between 9:16 and 16:9.
 
 ### Notes
+
 - Fit formula (view-perpendicular plane): `d_h = halfH / tan(fov/2)`, `d_w = halfW / (tan(fov/2) * aspect)`, `d = max(d_h, d_w) + margin`.
 - `createViewportSync` currently only fixes aspect; it must also re-run `applyFraming` because distance now depends on aspect.
 - Keep the projector's `z = 0` plane unchanged; the fit must not move the play plane.
@@ -105,19 +112,23 @@ Bounds rectangle fully on-screen with no clipping at 21:9, 16:9, 4:3, 1:1, 3:4, 
 **Prerequisite:** A merged (bounds + reframed camera exist).
 
 ### Session start
+
 - Read: `src/rendering/Materials.ts`, `src/rendering/Scene.ts`, `src/main.ts`.
 - Pull current TSL docs via context7 (three.js): `backgroundNode`, `uv`/`screenUV`, `mix`, `smoothstep`. Do not rely on memory.
 - Run: `pnpm dev`.
 
 ### Work
+
 - [I] Add `createBackgroundNode(palette): Node` in `Materials.ts` returning a **flat color stub**, and assign `scene.backgroundNode` in `Scene.ts` (needs a cast/augmentation — `backgroundNode` is not in `@types/three`'s `Scene`; confirm tsc stays clean).
 - [You] Replace the stub body with a vertical gradient + vignette, optional subtle noise, driven by a palette object (temporary literal until workstream C).
 - [You] Decide: pure `backgroundNode`, or also a faint backdrop/floor plane for depth (extra draw + fragment cost — weigh against the perf budget).
 
 ### Success signal
+
 Looks good in portrait and landscape; no extra draw call for the pure-node option; changing the palette literal updates the scene live; TSL graph compiles under `pnpm build`.
 
 ### Notes
+
 - `scene.backgroundNode` is confirmed in three 0.185 (`three/src/nodes/accessors/SceneProperties.js:34`) but missing from `@types/three`.
 - One full-screen fragment, no post-processing (perf budget).
 - This is the transferable TSL skill for step 8; explore, don't just copy.
@@ -131,18 +142,22 @@ Looks good in portrait and landscape; no extra draw call for the pure-node optio
 **Prerequisite:** B merged (background reads a palette), A merged.
 
 ### Session start
+
 - Read: `src/content/types.ts` (`Theme.background: unknown`), `src/rendering/Scene.ts`, `src/rendering/Materials.ts`.
 - Run: `pnpm dev`.
 
 ### Work
+
 - [You] Create `src/content/themes/halloween.ts` exporting a palette: background top/bottom, vignette tint, key/fill/rim light tints, and target/restricted accent colors.
-- [You] Fix the palette's field names/types — this *is* the `Theme.background` shape.
+- [You] Fix the palette's field names/types — this _is_ the `Theme.background` shape.
 - [I] Once fields are fixed: give `Theme.background` a real type in `content/types.ts` (replacing `unknown`) and thread the palette through `Scene.ts` lighting + `createBackgroundNode`.
 
 ### Success signal
+
 Swapping only the palette changes the entire scene (background + lights + accents) with zero gameplay code change. `content/types.ts` no longer says `background: unknown`.
 
 ### Notes
+
 - This is the first real `content/` data and the pattern every later theme (step 7) copies.
 - Gameplay must never read any of this — keep palette access rendering-only.
 
@@ -155,20 +170,24 @@ Swapping only the palette changes the entire scene (background + lights + accent
 **Prerequisite:** C merged (palette exists), A merged (framing stable).
 
 ### Session start
+
 - Read: `src/rendering/Scene.ts`, `src/content/themes/halloween.ts`, `src/main.ts`, `docs/PERF-BUDGET.md`.
 - Run: `pnpm dev` with the placeholder still present for a lit subject.
 
 ### Work
+
 - [You] Tune ambient/key/fill/rim intensities and tints against real geometry and the background; land readable silhouettes.
 - [I] Wire `renderer.toneMapping` (+ `toneMappingExposure`) and confirm `outputColorSpace`, so what you tune is what ships.
 - [You] Decide tone mapping: `NoToneMapping` vs. `ACESFilmicToneMapping` (or similar) — pick by eye, note the tradeoff.
 - [You] Confirm no shadows (Decision E): verify a flat, unshadowed cube still separates from the background via the rim light.
 
 ### Success signal
+
 Cubes read clearly against the background; no blown highlights; the look survives with tone mapping on in both renderer backends.
 
 ### Notes
-- Tone mapping changes *all* colors — do it before final palette judgement, not after.
+
+- Tone mapping changes _all_ colors — do it before final palette judgement, not after.
 - No post-processing, no shadow maps (perf budget).
 
 ---
@@ -180,18 +199,22 @@ Cubes read clearly against the background; no blown highlights; the look survive
 **Prerequisite:** A merged (bounds + fit), D merged (lighting) so the bounds read against the final look.
 
 ### Session start
+
 - Read: `src/config.ts` (PLAYFIELD), `src/rendering/Camera.ts`, `src/main.ts`.
 - Run: `pnpm dev`.
 
 ### Work
+
 - [I] New `src/rendering/PlayArea.ts`: allocation-free `contains(bounds, x, y)` / `clampToBounds(bounds, out)`, plus a `Line` rect sized to the current bounds (redrawn on reframe), gated behind `DEBUG_PLAYFIELD` in `config.ts`.
 - [You] Set the final `PLAYFIELD.halfHeight` + `sideMargin` (width is derived) and the **launch line** (`minY`, where step 3 objects will appear); confirm the drawn rect matches.
 - [You] Decide whether the swipe projector or input should ignore points outside bounds now, or defer to step 5 collision.
 
 ### Success signal
+
 Drawn arena matches the numbers, stays fully framed per workstream A at every aspect, and the rect is absent from the production bundle when `DEBUG_PLAYFIELD` is false.
 
 ### Notes
+
 - `contains`/`clampToBounds` are the contract step 3's `Spawner` consumes; keep them pure and testable.
 - Debug geometry must be dead-code-eliminated in `pnpm build` (Vite drops `import.meta.env.DEV` blocks).
 
@@ -204,10 +227,12 @@ Drawn arena matches the numbers, stays fully framed per workstream A at every as
 **Prerequisite:** A–E merged.
 
 ### Session start
+
 - Read: this file end to end, `src/config.ts`, `scripts/verify-playfield.ts`.
 - Run: `pnpm verify:playfield`, then `pnpm build`.
 
 ### Work
+
 - [You] Confirm Decision B (fit-bounds) still holds after living with the look; sign off the aspect matrix.
 - [Pair] Delete `rendering/placeholder.ts` and its import; remove the dead CSS-canvas gradient from `src/style.css`; make `main.ts` a clean composition root (reframe + background + play area).
 - [I] Finalize `scripts/verify-playfield.ts` (see Verification), wire into `tsconfig` like the foundation harness.
@@ -215,9 +240,11 @@ Drawn arena matches the numbers, stays fully framed per workstream A at every as
 - [You] On-device sign-off: `pnpm preview:mobile` in portrait.
 
 ### Success signal
+
 Definition of done below is fully checked; no draco/basis in `dist/assets`; device shows the arena fully framed.
 
 ### Notes
+
 - Placeholder deletion belongs here, not earlier, so A–E have a lit subject to tune against.
 
 ---

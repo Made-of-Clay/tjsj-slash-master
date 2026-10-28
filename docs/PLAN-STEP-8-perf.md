@@ -1,20 +1,13 @@
 # Step 8 — Performance pass
 
-Plan for [PLAN.md](../PLAN.md) §8. Extends it, doesn't replace it.
+Index: [PLAN.md](../PLAN.md).
 
-- Scope: the render path, not the rules — collapse the 128-slot mesh ceiling
-  into a handful of instanced draws, then prove the steady frame allocates
-  nothing and stays inside the frame budget.
-- Target: identical gameplay and visuals on both themes; `renderer.info` draw
-  calls ≤ 14 while swiping (12 instanced worst case + background + blade
-  trail, down from a 128-mesh ceiling); no per-frame allocation; 60 FPS on a
-  mid-range phone, WebGPU and WebGL2.
-- Not in step 8: content/asset work (step 9), juice/HUD polish (step 9),
-  runtime theme swap (step 10), spawn weighting, LOD, frustum-culling
-  machinery beyond what instancing needs.
-
-Owner tags: **[I]** assistant, **[You]** user, **[Pair]** scaffold-then-decide.
-Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
+- **Scope** — mesh-per-slot to one `InstancedMesh` per def, then prove the steady frame allocates nothing.
+- **Contracts** — `count` is the draw count; one reused `Object3D`; `frustumCulled = false`; scene graph is defs × 3 regardless of pool size; zero steady-frame allocation.
+- **Files** — `rendering/ObjectViews.ts`, `DebrisViews.ts`, `BladeTrail.ts`, `game/Physics.ts`, `Slicer.ts`, `Input.ts`.
+- **Acceptance** — `verify:perf` (draw ceiling, allocation guard); ≤ 14 draws while swiping before step 9; 60 FPS on a mid-range phone, WebGPU and WebGL2.
+- **Not doing** — assets, LOD/occlusion, spawn weighting, theme swap, resizing the pool.
+- **Decisions** — 8A–8J.
 
 > **Status — complete 2026-10-25.** A `b604f1e`, B `6549c87`, C `e3f19df`,
 > D in the close-out commit; plus an unplanned mobile-input fix `93c1806`.
@@ -54,6 +47,8 @@ Workstreams run **sequentially A → B → C → D**; sessions: A | B | C | D.
    would trade draw calls for GC pauses on a phone.
 
 ## Decisions (step 8, locked 2026-10-25, [You])
+
+> Detail + rationale only. Canonical one-line rows: [DECISIONS.md](DECISIONS.md).
 
 | #   | Decision      | Choice                                                                                                                                                                                                                                         | Rationale                                                                                                         |
 | --- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
