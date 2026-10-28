@@ -42,6 +42,8 @@ import { createObjectViews, syncViews } from '../src/rendering/ObjectViews.ts';
 import { createDebrisViews, syncDebrisViews } from '../src/rendering/DebrisViews.ts';
 import { createSparkViews, syncSparkViews } from '../src/rendering/SparkViews.ts';
 import { createShake } from '../src/rendering/Shake.ts';
+import { preloadModels } from '../src/rendering/ModelAssets.ts';
+import { readAssetBytes } from './read-asset.ts';
 import { Effects } from '../src/game/Effects.ts';
 import type { SpawnedObject } from '../src/game/SpawnedObject.ts';
 import type { DebrisPiece } from '../src/game/Debris.ts';
@@ -110,6 +112,11 @@ function build(theme: Theme, capacity = POOL_SIZE) {
 // ===== construction =====
 console.log('Construction');
 for (const theme of THEMES) {
+    // Boot order: assets resolve before any view caches a geometry.
+    await preloadModels(
+        theme.objects.flatMap((def) => [def.model, ...(def.pieces ?? [])]),
+        readAssetBytes,
+    );
     const { scene, views, debris } = build(theme);
 
     check(

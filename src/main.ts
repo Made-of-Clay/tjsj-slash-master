@@ -26,6 +26,7 @@ import {
 } from './config';
 import type { ToneMappingMode } from './config';
 import { getTheme, resolveThemeId } from './content/themes';
+import { preloadModels } from './rendering/ModelAssets';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
 import type { SwipeSegment } from './game/Input';
@@ -108,6 +109,10 @@ async function boot(): Promise<void> {
     if (themeColorMeta instanceof HTMLMetaElement) {
         themeColorMeta.content = theme.background.top;
     }
+
+    // Models resolve once, before any view exists: `parts` bake, the pumpkin's
+    // GLB is fetched. Awaiting here keeps every downstream bake synchronous.
+    await preloadModels(theme.objects.flatMap((def) => [def.model, ...(def.pieces ?? [])]));
 
     const scene = createScene(theme);
 

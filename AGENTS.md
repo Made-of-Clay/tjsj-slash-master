@@ -29,6 +29,8 @@ Finish a task with: `npx tsc --noEmit` → `npx oxlint` → `pnpm verify` → `p
 - Comments: aim for 0. One or two lines when a why, invariant or non-obvious contract must be stated; 4+ only for real gotchas. Never narrate what the code visibly does. Update stale comments with the code.
 - Never commit unless asked. Messages: `feat: …` / `chore: …`.
 - Plans: a new step gets `docs/PLAN-STEP-N-<slug>.md` with the six-field header (`Scope`, `Contracts`, `Files`, `Acceptance`, `Not doing`, `Decisions`) and a router row in `PLAN.md`.
+- Scratch work, agent previews and downloads go in `tmp/` (gitignored). Never use the system `/tmp`.
+- Model sources are self-contained folders under `src/content/models/` (name = model, see its `README.md`); `pumpkin/*.glb` loads at boot, everything else bakes.
 
 ## Gotchas
 

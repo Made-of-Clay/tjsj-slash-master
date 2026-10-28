@@ -4,7 +4,7 @@ import { OBJECT_MATERIAL } from '../config';
 import type { GameObjectDefinition, ObjectCategory, ThemeAccents } from '../content/types';
 import type { SpawnedObject } from '../game/SpawnedObject';
 import { createObjectMaterial } from './Materials';
-import { bakeModel } from './Model';
+import { modelGeometry } from './ModelAssets';
 
 /**
  * One `InstancedMesh` per def. `count` is the draw count, so a def with no
@@ -38,7 +38,7 @@ export function createObjectViews(
     for (const def of models) {
         if (instanced.has(def.id)) continue;
 
-        const mesh = new InstancedMesh(bakeModel(def.model), materials[def.category], capacity);
+        const mesh = new InstancedMesh(modelGeometry(def.model), materials[def.category], capacity);
         mesh.count = 0;
         // Instances span the playfield, so whole-mesh culling only pops spawns.
         mesh.frustumCulled = false;

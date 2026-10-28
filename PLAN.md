@@ -8,7 +8,7 @@ Gameplay / rendering / content are separate: a theme is data plus one registry e
 - Numbers live in `src/config.ts` or theme data; no magic numbers in code.
 - Fixed-step sim, zero steady-frame allocation, pool never grows.
 - Play plane `z = 0`; hit tests are 3D sphere-vs-segment.
-- No dependencies beyond three + stats.js; no binary assets — procedural art, synthesised audio.
+- No dependencies beyond three + stats.js; one authored GLB (`src/content/models/pumpkin/`), everything else procedural art and synthesised audio.
 - Draw ceiling ≤ 17 while swiping.
 
 ## Router — read only what the task touches
@@ -26,6 +26,7 @@ Gameplay / rendering / content are separate: a theme is data plus one registry e
 | feel, sparks, shake, combo, audio, flow    | [step 9](docs/PLAN-STEP-9-polish.md) · 9A–9L                                    |
 | default theme, `?theme=`, manifest         | [step 10](docs/PLAN-STEP-10-content.md) · 10A–10J                               |
 | card legend, object thumbnails             | [step 11](docs/PLAN-STEP-11-legend.md) · 11A–11D                                |
+| authored GLB, boot preload, asset bake     | [step 12](docs/PLAN-STEP-12-assets.md) · 12A–12D                                |
 | **numbers / feel tuning**                  | [TUNABLES](docs/TUNABLES.md) — nothing else                                     |
 | **why a choice was made**                  | [DECISIONS](docs/DECISIONS.md) — grep the ID, e.g. `9C`                         |
 | **what is done / next / blocked**          | [STATE](STATE.md)                                                               |
@@ -45,7 +46,7 @@ Every step doc opens with the same six fields — `Scope`, `Contracts`, `Files`,
 
 Order is history, not a reading list. Router decides what to open.
 
-1 foundation · 2 playfield · 3 launching · 4 swipe · 5 cutting · 6 rules · 7 content · 8 perf · 9 polish · 10 content pipeline · 11 legend
+1 foundation · 2 playfield · 3 launching · 4 swipe · 5 cutting · 6 rules · 7 content · 8 perf · 9 polish · 10 content pipeline · 11 legend · 12 assets
 
 ## Verify
 

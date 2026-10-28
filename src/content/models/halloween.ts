@@ -12,23 +12,14 @@ import type { ObjectModel } from '../types';
  * Each def's radius must stay within `PLAYFIELD.sideMargin`.
  */
 
+/**
+ * Authored GLB (`src/content/models/pumpkin/`), normalised to `size` at boot.
+ * Faces +Z, so it needs no rotation to face the camera.
+ */
+const PUMPKIN_URL = new URL('./pumpkin/pumpkin.glb', import.meta.url).href;
+
 export function createPumpkinModel(): ObjectModel {
-    return {
-        kind: 'parts',
-        size: 1,
-        parts: [
-            {
-                geometry: new SphereGeometry(0.5, 16, 12),
-                color: '#e8722c',
-                scale: [1, 0.85, 1],
-            },
-            {
-                geometry: new CylinderGeometry(0.04, 0.06, 0.14, 6),
-                color: '#5c7c35',
-                position: [0, 0.42, 0],
-            },
-        ],
-    };
+    return { kind: 'asset', url: PUMPKIN_URL, size: 1 };
 }
 
 /** Authored slice halves: one shell per side of z=0, each with a flesh cap. */

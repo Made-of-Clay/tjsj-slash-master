@@ -8,8 +8,8 @@ import type { ModelPart, ObjectModel } from '../content/types';
  * zero per-frame cost. GPU-free, so `verify-content` runs it under bun.
  */
 
-/** No textures or tangents in step 7. */
-const STRIPPED = ['uv', 'uv1', 'tangent'] as const;
+/** No textures or tangents: vertex colour is the only surface input. */
+export const STRIPPED = ['uv', 'uv1', 'tangent'] as const;
 
 const ZERO: readonly [number, number, number] = [0, 0, 0];
 const ONE: readonly [number, number, number] = [1, 1, 1];
@@ -18,7 +18,7 @@ const ONE: readonly [number, number, number] = [1, 1, 1];
 export function bakeModel(model: ObjectModel): BufferGeometry {
     if (model.kind === 'asset') {
         throw new Error(
-            `bakeModel: asset models are the step-9 loader seam (${model.url}); bake \`parts\` instead`,
+            `bakeModel: asset models load asynchronously (${model.url}); use modelGeometry after preloadModels`,
         );
     }
     if (model.parts.length === 0) {
@@ -81,7 +81,7 @@ function bakePart(part: ModelPart): BufferGeometry {
 }
 
 /** Vertex colours must be linear; `setStyle` converts from sRGB. */
-function writeVertexColors(geometry: BufferGeometry, style: string): void {
+export function writeVertexColors(geometry: BufferGeometry, style: string): void {
     const color = new Color().setStyle(style);
     const count = geometry.getAttribute('position').count;
     const colors = new Float32Array(count * 3);

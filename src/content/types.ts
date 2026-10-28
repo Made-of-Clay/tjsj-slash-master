@@ -22,7 +22,8 @@ export interface ModelPart {
 /**
  * How an object is drawn. Gameplay reads only `size`.
  * `size` = max extent; model centered on origin and fits a `size` box.
- * `asset` = step-9 loader seam (baking throws until the async loader lands).
+ * `asset` = GLB fetched once at boot by `rendering/ModelAssets`; a sync bake
+ * throws. `parts` bake in place.
  */
 export type ObjectModel =
     | { kind: 'parts'; parts: readonly ModelPart[]; size: number }

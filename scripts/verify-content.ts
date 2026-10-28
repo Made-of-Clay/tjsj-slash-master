@@ -39,7 +39,9 @@ import {
 import type { ThemeId } from '../src/content/themes/index.ts';
 import { boxBoundingRadius } from '../src/game/SpawnedObject.ts';
 import { bakeModel } from '../src/rendering/Model.ts';
+import { modelGeometry, preloadModels } from '../src/rendering/ModelAssets.ts';
 import { renderObjectIconPixels } from '../src/ui/objectIcons.ts';
+import { readAssetBytes } from './read-asset.ts';
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const SLUG = /^[a-z][a-zA-Z0-9]*$/;
@@ -211,9 +213,15 @@ const allDefs: Array<{ themeId: ThemeId; def: GameObjectDefinition }> = THEME_ID
     (themeId) => THEMES[themeId].objects.map((def) => ({ themeId, def })),
 );
 
+// The boot path, run offline: assets read from the committed bytes.
+await preloadModels(
+    allDefs.flatMap(({ def }) => [def.model, ...(def.pieces ?? [])]),
+    readAssetBytes,
+);
+
 function bake(model: ObjectModel): BufferGeometry | undefined {
     try {
-        return bakeModel(model);
+        return modelGeometry(model);
     } catch {
         return undefined;
     }
@@ -263,7 +271,7 @@ for (const { themeId, def } of allDefs) {
         `centre=${center.toArray().map((value) => value.toFixed(3))}`,
     );
 
-    const icon = renderObjectIconPixels(def.model, 32);
+    const icon = renderObjectIconPixels(geometry, 32);
     let opaque = 0;
     for (let offset = 3; offset < icon.length; offset += 4) {
         if (icon[offset] !== 0) opaque += 1;
@@ -306,8 +314,8 @@ for (const { themeId, def } of allDefs) {
         assetMessage = (error as Error).message;
     }
     check(
-        'asset models throw at the documented loader seam',
-        assetMessage.includes('loader seam'),
+        'sync bake refuses assets (boot preloads them)',
+        assetMessage.includes('asynchronously'),
         assetMessage,
     );
 

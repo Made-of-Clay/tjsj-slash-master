@@ -139,3 +139,12 @@ Rules: rows are permanent. A reversal gets a dated **superseded by** note on the
 | 11B | Thumbnails = boot-time CPU orthographic z-buffer over the theme's baked geometry; no GPU readback, no art.     |
 | 11C | `name` lives in `GameObjectDefinition`; `main.ts` hands the HUD `{ name, score, icon }` primitives.            |
 | 11D | Rendered once at boot as PNG data URLs; three cards reuse the URL, steady frame unchanged.                    |
+
+## Step 12 — assets
+
+| ID  | Decision                                                                                                              |
+| --- | --------------------------------------------------------------------------------------------------------------------- |
+| 12A | One GLB per authored model, fetched at boot; everything else bakes.                                                   |
+| 12B | GLB flattens to one merged vertex-coloured geometry; materials and emission dropped.                                |
+| 12C | Assets are binned: centred, max extent = `size`; spawn fit unchanged.                                                 |
+| 12D | `preloadModels` takes an `AssetBytes` reader: bun cannot `fetch` `file:` URLs.                                        |

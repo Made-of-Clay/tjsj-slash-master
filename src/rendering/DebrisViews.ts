@@ -3,7 +3,7 @@ import type { BufferGeometry, MeshStandardMaterial, Scene } from 'three/webgpu';
 import { CUT } from '../config';
 import type { GameObjectDefinition, ObjectCategory } from '../content/types';
 import type { DebrisPiece } from '../game/Debris';
-import { bakeModel } from './Model';
+import { modelGeometry } from './ModelAssets';
 
 /**
  * View layer for sliced pieces: one `InstancedMesh` per (def, piece index),
@@ -46,7 +46,7 @@ export function createDebrisViews(
     const scaledClone = (def: GameObjectDefinition): BufferGeometry => {
         let geometry = scaledClones.get(def.id);
         if (!geometry) {
-            geometry = bakeModel(def.model);
+            geometry = modelGeometry(def.model).clone();
             geometry.scale(CUT.pieceScale, CUT.pieceScale, CUT.pieceScale);
             scaledClones.set(def.id, geometry);
         }
@@ -60,7 +60,7 @@ export function createDebrisViews(
         const material = materials[def.category];
         const geometryAt = (index: number): BufferGeometry => {
             const authored = def.pieces?.[index];
-            return authored ? bakeModel(authored) : scaledClone(def);
+            return authored ? modelGeometry(authored) : scaledClone(def);
         };
 
         instanced.set(def.id, [
