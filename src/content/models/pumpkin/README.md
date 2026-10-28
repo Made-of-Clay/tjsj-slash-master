@@ -31,6 +31,8 @@ vertex colour, not a light.
   through by pointer: floor → `PumpkinGlow`, wall/bevel → `PumpkinFlesh`,
   shell → `PumpkinShell`. Never reclassify by geometry after the cut.
 - Front is −Y, up is +Z. Body is 2.16 wide × 1.64 tall; 2.05 with the stem.
+- The body seams split at 62° (default 38°): at 8 rings the row seams reach
+  40–60°, which flat-bands the squash. Pocket rims stay sharp.
 
 ## Tuning
 
@@ -40,7 +42,9 @@ vertex colour, not a light.
 
 ## Budget
 
-1 304 tris — body 1 046, stem 92, tendril 166. Path point count is what costs:
-every outline vertex adds a wall quad on both ring joins. Body must stay
-manifold (0 non-manifold edges, checked with a bmesh pass); the boolean drops
-out of EXACT the moment a cutter path self-touches.
+1 000 tris — body 848, stem 68, tendril 84. The pumpkin is drawn at ~1/14 of the
+viewport height (≈60 px), so detail is tuned for that: 32 × 8 body, 16-point
+mouth, 6-side stem, 10-step tendril. Path point count is what costs: every
+outline vertex adds a wall quad on both ring joins. Body must stay manifold
+(0 non-manifold edges, checked with a bmesh pass); the boolean drops out of
+EXACT the moment a cutter path self-touches.

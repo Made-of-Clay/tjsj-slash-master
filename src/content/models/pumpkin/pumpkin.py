@@ -20,7 +20,7 @@ PREVIEWS = os.path.join(HERE, "previews")
 
 BODY = {
     "segments": 32,
-    "rings": 10,
+    "rings": 8,
     "rx": 1.08,
     "ry": 1.04,
     "rz": 0.85,
@@ -141,16 +141,14 @@ def arc(cx, cz, rx, rz, a0, a1, steps):
 
 def eye_path():
     """Tall arch, with a fat finger rising from the lip and curling outward."""
-    pts = arc(0.00, 0.00, 0.29, 0.46, 180, 0, 10)
+    pts = arc(0.00, 0.00, 0.29, 0.46, 180, 0, 8)
     pts += [
         (0.155, 0.00),
-        (0.165, 0.10),
-        (0.150, 0.19),
-        (0.100, 0.275),
-        (0.030, 0.290),
-        (-0.025, 0.250),
-        (-0.050, 0.180),
-        (-0.055, 0.090),
+        (0.165, 0.12),
+        (0.125, 0.24),
+        (0.055, 0.285),
+        (-0.020, 0.225),
+        (-0.050, 0.090),
         (-0.045, 0.000),
     ]
     return pts
@@ -178,18 +176,14 @@ def mouth_path():
     ]
     lower = [
         (0.690, -0.245),
-        (0.520, -0.365),
-        (0.280, -0.480),
-        (0.185, -0.530),
-        (0.145, -0.530),
+        (0.480, -0.380),
+        (0.200, -0.520),
         (0.130, -0.410),
         (0.045, -0.390),
         (-0.045, -0.390),
         (-0.130, -0.410),
-        (-0.145, -0.530),
-        (-0.185, -0.530),
-        (-0.280, -0.480),
-        (-0.520, -0.365),
+        (-0.200, -0.520),
+        (-0.480, -0.380),
         (-0.690, -0.245),
     ]
     return upper + lower
@@ -334,20 +328,20 @@ def build_stem():
         (-0.07, 0.02, 1.11),
     ]
     radii = [0.28, 0.215, 0.19, 0.175, 0.16, 0.145]
-    return build_tube("PumpkinStem", path, radii, sides=8)
+    return build_tube("PumpkinStem", path, radii, sides=6)
 
 
 def build_tendril():
     points = []
     radii = []
-    steps = 16
+    steps = 10
     for i in range(steps + 1):
         t = i / steps
         a = math.radians(250.0 + 430.0 * t)
         r = 0.16 * (1.0 - 0.5 * t)
         points.append((0.20 + r * math.cos(a), -0.03 + 0.02 * t, 0.92 + r * math.sin(a)))
         radii.append(0.045 * (1.0 - 0.35 * t))
-    return build_tube("PumpkinTendril", points, radii, sides=5)
+    return build_tube("PumpkinTendril", points, radii, sides=4)
 
 
 # --- materials, shading, scene ---------------------------------------------
@@ -470,7 +464,7 @@ def main():
         bpy.ops.object.modifier_apply(modifier=mod.name)
         bpy.data.objects.remove(cutter, do_unlink=True)
 
-    split_shading(body)
+    split_shading(body, 62.0)
 
     for part in (build_stem(), build_tendril()):
         part.data.materials.append(bpy.data.materials["PumpkinStem"])
