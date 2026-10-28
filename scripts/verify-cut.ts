@@ -365,12 +365,14 @@ console.log('Config + spawn');
     const defs = [
         {
             id: 'a',
+            name: 'A',
             score: 3,
             category: 'target' as const,
             model: seamBoxModel(),
         },
         {
             id: 'b',
+            name: 'B',
             score: -2,
             category: 'restricted' as const,
             model: seamBoxModel(),

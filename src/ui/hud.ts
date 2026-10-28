@@ -4,6 +4,13 @@
  * only — no gameplay imports; `main.ts` wiring feeds it. `sync` writes DOM only
  * when a displayed value changes, so the steady frame does zero DOM work.
  */
+export interface HudObject {
+    readonly name: string;
+    readonly score: number;
+    /** Boot-time data-URL thumbnail; null hides the art but keeps the row. */
+    readonly icon: string | null;
+}
+
 export interface Hud {
     /** Push the latest score / seconds-left / cuts in the live combo chain. */
     sync(score: number, secondsLeft: number, combo: number): void;
@@ -35,6 +42,51 @@ interface Overlay {
     readonly note: HTMLElement;
 }
 
+function formatPoints(score: number): string {
+    if (score === 0) return '0';
+    return score > 0 ? `+${score}` : `−${Math.abs(score)}`;
+}
+
+/** One row per slashable object: thumbnail, name, points. */
+function createLegend(objects: readonly HudObject[]): HTMLElement {
+    // Spans, not a list: a <button> may only contain phrasing content.
+    const legend = document.createElement('span');
+    legend.className = 'overlay-legend';
+
+    const heading = document.createElement('span');
+    heading.className = 'overlay-legend-heading';
+    heading.textContent = 'Key';
+    legend.append(heading);
+
+    for (const object of objects) {
+        const item = document.createElement('span');
+        item.className = 'overlay-legend-item';
+
+        const art = document.createElement('span');
+        art.className = 'overlay-legend-art';
+        if (object.icon) {
+            const image = document.createElement('img');
+            image.className = 'overlay-legend-icon';
+            image.src = object.icon;
+            image.alt = '';
+            art.append(image);
+        }
+
+        const name = document.createElement('span');
+        name.className = 'overlay-legend-name';
+        name.textContent = object.name;
+
+        const score = document.createElement('span');
+        score.className = `overlay-legend-score${object.score < 0 ? ' overlay-legend-negative' : ''}`;
+        score.textContent = formatPoints(object.score);
+
+        item.append(art, name, score);
+        legend.append(item);
+    }
+
+    return legend;
+}
+
 function createOverlay(
     host: HTMLElement,
     className: string,
@@ -64,7 +116,7 @@ function createOverlay(
     return { root, card, note };
 }
 
-export function createHud(root: HTMLElement): Hud {
+export function createHud(root: HTMLElement, objects: readonly HudObject[] = []): Hud {
     // Flow layout (not absolute) so the root's safe-area padding applies.
     const bar = document.createElement('div');
     bar.className = 'hud-bar';
@@ -91,6 +143,11 @@ export function createHud(root: HTMLElement): Hud {
     bestEl.className = 'overlay-best';
     overCard.card.insertBefore(bestEl, overCard.note);
     overCard.card.insertBefore(finalEl, bestEl);
+
+    // A legend belongs on all three cards: the same objects, one row each.
+    start.card.insertBefore(createLegend(objects), start.note);
+    paused.card.insertBefore(createLegend(objects), paused.note);
+    overCard.card.insertBefore(createLegend(objects), overCard.note);
 
     // Appended after the cards so both controls stay tappable on every screen.
     const mute = document.createElement('button');

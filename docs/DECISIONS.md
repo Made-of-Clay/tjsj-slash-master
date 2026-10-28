@@ -130,3 +130,12 @@ Rules: rows are permanent. A reversal gets a dated **superseded by** note on the
 | 10H | `theme-color` meta follows the resolved theme; manifest `theme_color` follows the built default.              |
 | 10I | Selection checks live in `verify:content`, above its failure gate.                                            |
 | 10J | No dependencies.                                                                                              |
+
+## Step 11 — card object legend
+
+| ID  | Decision                                                                                                      |
+| --- | ------------------------------------------------------------------------------------------------------------- |
+| 11A | Legend appears on start, pause and game-over cards; one shared row builder per card.                           |
+| 11B | Thumbnails = boot-time CPU orthographic z-buffer over the theme's baked geometry; no GPU readback, no art.     |
+| 11C | `name` lives in `GameObjectDefinition`; `main.ts` hands the HUD `{ name, score, icon }` primitives.            |
+| 11D | Rendered once at boot as PNG data URLs; three cards reuse the URL, steady frame unchanged.                    |

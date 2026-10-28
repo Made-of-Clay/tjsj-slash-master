@@ -2,6 +2,22 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-27
+
+### Step 11 — card object legend
+
+- `content/types.ts`: `GameObjectDefinition.name`; both themes author display
+  names. Copy lives with the objects.
+- `ui/objectIcons.ts`: boot-time thumbnails from each def's baked geometry —
+  orthographic CPU projection with a z-buffer and flat shading, emitted as PNG
+  data URLs. No GPU readback, no authored art, identical on both backends.
+- `ui/hud.ts` + `style.css`: start, pause and game-over cards list every
+  slashable object as icon + name + signed points; negatives in red.
+- `main.ts`: thumbnails built once before the card; the HUD still receives
+  primitives only (`name`, `score`, `icon`).
+- `verify:content` 143 → 154 checks (names + a visible-icon render per def);
+  `verify:docs` now expects eleven step docs.
+
 ## 2026-10-26
 
 ### Step 10 — built default + boot override

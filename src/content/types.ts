@@ -31,6 +31,8 @@ export type ObjectModel =
 /** Content-side object description; gameplay never reads `model`. */
 export interface GameObjectDefinition {
     id: string;
+    /** Display name for the card legend; content owns copy. */
+    name: string;
     score: number;
     category: ObjectCategory;
     model: ObjectModel;

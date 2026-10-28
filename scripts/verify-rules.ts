@@ -175,6 +175,7 @@ function defs() {
     return [
         {
             id: 'a',
+            name: 'A',
             score: 1,
             category: 'target' as const,
             model: {

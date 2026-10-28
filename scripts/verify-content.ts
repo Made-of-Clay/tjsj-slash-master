@@ -39,6 +39,7 @@ import {
 import type { ThemeId } from '../src/content/themes/index.ts';
 import { boxBoundingRadius } from '../src/game/SpawnedObject.ts';
 import { bakeModel } from '../src/rendering/Model.ts';
+import { renderObjectIconPixels } from '../src/ui/objectIcons.ts';
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const SLUG = /^[a-z][a-zA-Z0-9]*$/;
@@ -110,6 +111,11 @@ for (const id of THEME_IDS) {
     check(
         `[${tag}] object ids are unique`,
         new Set(defs.map((def) => def.id)).size === defs.length,
+    );
+    check(
+        `[${tag}] names are non-empty and unique`,
+        defs.every((def) => def.name.trim().length > 0) &&
+            new Set(defs.map((def) => def.name)).size === defs.length,
     );
     check(
         `[${tag}] has at least one target and one restricted`,
@@ -256,6 +262,13 @@ for (const { themeId, def } of allDefs) {
         Math.abs(center.x) <= 0.05 && Math.abs(center.y) <= 0.05 && Math.abs(center.z) <= 0.05,
         `centre=${center.toArray().map((value) => value.toFixed(3))}`,
     );
+
+    const icon = renderObjectIconPixels(def.model, 32);
+    let opaque = 0;
+    for (let offset = 3; offset < icon.length; offset += 4) {
+        if (icon[offset] !== 0) opaque += 1;
+    }
+    check(`[${tag}] legend icon renders visible pixels`, opaque > 20, `${opaque} px`);
 }
 
 for (const { themeId, def } of allDefs) {

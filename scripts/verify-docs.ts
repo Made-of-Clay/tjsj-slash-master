@@ -83,7 +83,7 @@ for (const link of linked) {
 const stepDocs = readdirSync('docs')
     .filter((name) => /^PLAN-STEP-\d+.*\.md$/.test(name))
     .sort((a, b) => Number(a.split('-')[2]) - Number(b.split('-')[2]));
-check('ten step docs exist', stepDocs.length === 10, `${stepDocs.length} found`);
+check('eleven step docs exist', stepDocs.length === 11, `${stepDocs.length} found`);
 for (const doc of stepDocs) {
     check(`router covers docs/${doc}`, plan.includes(`docs/${doc}`));
 }
@@ -110,7 +110,7 @@ check('STATE.md names what is next', state.includes('**Next'));
 // ===== decisions =====
 console.log('\nDecisions');
 const decisions = read('docs/DECISIONS.md');
-for (let step = 1; step <= 10; step += 1) {
+for (let step = 1; step <= 11; step += 1) {
     check(`decisions cover step ${step}`, decisions.includes(`## Step ${step} `));
 }
 const byId = new Set([...decisions.matchAll(/^\| (\d{1,2}[A-Z]) /gm)].map((m) => m[1]));

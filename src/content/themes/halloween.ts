@@ -38,6 +38,7 @@ export const halloween: Theme = {
     objects: [
         {
             id: 'pumpkin',
+            name: 'Pumpkin',
             score: 1,
             category: 'target',
             model: createPumpkinModel(),
@@ -45,18 +46,21 @@ export const halloween: Theme = {
         },
         {
             id: 'candy',
+            name: 'Candy',
             score: 1,
             category: 'target',
             model: createCandyModel(),
         },
         {
             id: 'skull',
+            name: 'Skull',
             score: -1,
             category: 'restricted',
             model: createSkullModel(),
         },
         {
             id: 'bomb',
+            name: 'Bomb',
             score: -3,
             category: 'hazard',
             weight: 0.15,

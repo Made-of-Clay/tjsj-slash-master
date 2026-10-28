@@ -30,30 +30,35 @@ export const christmas: Theme = {
     objects: [
         {
             id: 'ornament',
+            name: 'Ornament',
             score: 1,
             category: 'target',
             model: createOrnamentModel(),
         },
         {
             id: 'candyCane',
+            name: 'Candy cane',
             score: 1,
             category: 'target',
             model: createCandyCaneModel(),
         },
         {
             id: 'gift',
+            name: 'Gift',
             score: 1,
             category: 'target',
             model: createGiftModel(),
         },
         {
             id: 'snowGlobe',
+            name: 'Snow globe',
             score: -1,
             category: 'restricted',
             model: createSnowGlobeModel(),
         },
         {
             id: 'coal',
+            name: 'Coal',
             score: -2,
             category: 'hazard',
             weight: 0.15,

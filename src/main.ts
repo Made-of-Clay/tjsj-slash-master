@@ -56,6 +56,7 @@ import { createSparkViews, syncSparkViews } from './rendering/SparkViews';
 import { createShake } from './rendering/Shake';
 import { Effects } from './game/Effects';
 import { createHud } from './ui/hud';
+import { createObjectIcons } from './ui/objectIcons';
 import { createRecords } from './ui/records';
 import { createAudio } from './audio/Audio';
 import { createHaptics } from './ui/haptics';
@@ -186,7 +187,17 @@ async function boot(): Promise<void> {
     });
     syncViewport();
 
-    const hud = createHud(createUiRoot());
+    // Step 11: the cards' object legend. Thumbnails come from the theme's own
+    // baked models, so they follow any content change without authored art.
+    const icons = createObjectIcons(theme.objects);
+    const hud = createHud(
+        createUiRoot(),
+        theme.objects.map((def) => ({
+            name: def.name,
+            score: def.score,
+            icon: icons.get(def.id) ?? null,
+        })),
+    );
     const records = createRecords();
     // Step 9D: boot waits on the start card; restart skips it.
     const flow = new Flow();
