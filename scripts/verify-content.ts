@@ -279,6 +279,42 @@ for (const { themeId, def } of allDefs) {
     check(`[${tag}] legend icon renders visible pixels`, opaque > 20, `${opaque} px`);
 }
 
+// ===== asset budgets =====
+// Detail is budgeted for the size the model is drawn at, not for its preview:
+// `size / (2 × halfHeight)` is its share of the viewport (pumpkin ≈ 7 %).
+const ASSET_BUDGET = {
+    tris: 1_100,
+    bytes: 34_000,
+    viewportShare: 0.08,
+} as const;
+
+for (const { themeId, def } of allDefs) {
+    if (def.model.kind !== 'asset') continue;
+    const tag = `${themeId}/${def.id}`;
+    const geometry = bake(def.model);
+    if (!geometry) continue;
+
+    const tris = (geometry.index?.count ?? geometry.getAttribute('position').count) / 3;
+    const bytes = readAssetBytes(def.model.url).byteLength;
+    const share = def.model.size / (2 * PLAYFIELD.halfHeight);
+
+    check(
+        `[${tag}] asset tris within budget`,
+        tris <= ASSET_BUDGET.tris,
+        `${tris} tris, budget ${ASSET_BUDGET.tris}`,
+    );
+    check(
+        `[${tag}] asset bytes within budget`,
+        bytes <= ASSET_BUDGET.bytes,
+        `${bytes} B, budget ${ASSET_BUDGET.bytes}`,
+    );
+    check(
+        `[${tag}] asset is drawn small enough for that budget`,
+        share <= ASSET_BUDGET.viewportShare,
+        `${(share * 100).toFixed(1)} % of viewport height`,
+    );
+}
+
 for (const { themeId, def } of allDefs) {
     for (const [index, piece] of (def.pieces ?? []).entries()) {
         const tag = `${themeId}/${def.id} piece ${index}`;
