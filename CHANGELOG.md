@@ -2,6 +2,17 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-29
+
+### Skull ships as an authored asset
+
+- `content/models/skull/`: generator, `.blend`, `.glb` (998 tris, 29 028 B) and
+  the four previews. Solid superellipsoid cranium; two eye pockets and a nose are
+  boolean intrudes with dark floors, the four teeth are surface-keyed prisms.
+- `content/models/halloween.ts`: `createSkullModel` returns the GLB at
+  `size: 1`; the procedural skull parts are gone.
+- `verify:content` 157 → 160 checks (skull tri/byte/viewport budget).
+
 ## 2026-10-27
 
 ### Step 11 — card object legend

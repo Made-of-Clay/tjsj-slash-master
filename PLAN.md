@@ -8,7 +8,7 @@ Gameplay / rendering / content are separate: a theme is data plus one registry e
 - Numbers live in `src/config.ts` or theme data; no magic numbers in code.
 - Fixed-step sim, zero steady-frame allocation, pool never grows.
 - Play plane `z = 0`; hit tests are 3D sphere-vs-segment.
-- No dependencies beyond three + stats.js; one authored GLB (`src/content/models/pumpkin/`), everything else procedural art and synthesised audio.
+- No dependencies beyond three + stats.js; two authored GLBs (`content/models/pumpkin/`, `skull/`), everything else procedural art and synthesised audio.
 - Draw ceiling ≤ 17 while swiping.
 
 ## Router — read only what the task touches

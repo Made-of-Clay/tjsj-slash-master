@@ -7,16 +7,12 @@ Low-poly jack-o'-lantern built from `src/content/models/pumpkin-design.jpeg`
 ./tmp/blender-4.5.15-linux-x64/blender -b -P src/content/models/pumpkin/pumpkin.py [-- --no-render]
 ```
 
-Blender is not installed in this repo; the portable 4.5 LTS build lives in the
-gitignored `tmp/`. Any 4.5+ `blender` binary works.
-
 Outputs: `pumpkin.blend` (editable scene), `pumpkin.glb` (Y-up, materials baked),
 `previews/{front,side,top,hero}.png`.
 
-The game loads `pumpkin.glb` once at boot, merges its primitives into one
-vertex-coloured geometry and normalises it to `size` (1.0). Base colours carry
-the shell, flesh, glow and stem; emission does not — the glow face is a bright
-vertex colour, not a light.
+Boot fetches it and normalises it to `size` (1.0); `../README.md` has the
+flatten. Base colours carry the shell, flesh, glow and stem; emission does not —
+the glow face is a bright vertex colour, not a light.
 
 ## Shape rules
 
@@ -30,7 +26,7 @@ vertex colour, not a light.
 - Materials are assigned per face on the cutter before the boolean and carried
   through by pointer: floor → `PumpkinGlow`, wall/bevel → `PumpkinFlesh`,
   shell → `PumpkinShell`. Never reclassify by geometry after the cut.
-- Front is −Y, up is +Z. Body is 2.16 wide × 1.64 tall; 2.05 with the stem.
+- Body is 2.16 wide × 1.64 tall; 2.05 with the stem.
 - The body seams split at 62° (default 38°): at 8 rings the row seams reach
   40–60°, which flat-bands the squash. Pocket rims stay sharp.
 

@@ -1,10 +1,4 @@
-import {
-    BoxGeometry,
-    CircleGeometry,
-    ConeGeometry,
-    CylinderGeometry,
-    SphereGeometry,
-} from 'three/webgpu';
+import { CircleGeometry, ConeGeometry, CylinderGeometry, SphereGeometry } from 'three/webgpu';
 import type { ObjectModel } from '../types';
 
 /**
@@ -13,10 +7,11 @@ import type { ObjectModel } from '../types';
  */
 
 /**
- * Authored GLB (`src/content/models/pumpkin/`), normalised to `size` at boot.
- * Faces +Z, so it needs no rotation to face the camera.
+ * Authored GLBs (`src/content/models/<model>/`), normalised to `size` at boot.
+ * Both face +Z, so they need no rotation to face the camera.
  */
 const PUMPKIN_URL = new URL('./pumpkin/pumpkin.glb', import.meta.url).href;
+const SKULL_URL = new URL('./skull/skull.glb', import.meta.url).href;
 
 export function createPumpkinModel(): ObjectModel {
     return { kind: 'asset', url: PUMPKIN_URL, size: 1 };
@@ -73,33 +68,9 @@ export function createCandyModel(): ObjectModel {
     };
 }
 
+/** Authored GLB (`src/content/models/skull/`), normalised to `size` at boot. */
 export function createSkullModel(): ObjectModel {
-    return {
-        kind: 'parts',
-        size: 1,
-        parts: [
-            {
-                geometry: new SphereGeometry(0.38, 16, 10),
-                color: '#e6dcc6',
-                scale: [1, 0.9, 1],
-            },
-            {
-                geometry: new BoxGeometry(0.3, 0.18, 0.24),
-                color: '#d9cfba',
-                position: [0, -0.34, 0],
-            },
-            {
-                geometry: new SphereGeometry(0.09, 6, 4),
-                color: '#101820',
-                position: [-0.14, 0.02, 0.32],
-            },
-            {
-                geometry: new SphereGeometry(0.09, 6, 4),
-                color: '#101820',
-                position: [0.14, 0.02, 0.32],
-            },
-        ],
-    };
+    return { kind: 'asset', url: SKULL_URL, size: 1 };
 }
 
 /** Hazard (9B): dark shell, stubby fuse and a lit tip — reads as "do not cut". */

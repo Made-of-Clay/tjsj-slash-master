@@ -110,8 +110,8 @@ async function boot(): Promise<void> {
         themeColorMeta.content = theme.background.top;
     }
 
-    // Models resolve once, before any view exists: `parts` bake, the pumpkin's
-    // GLB is fetched. Awaiting here keeps every downstream bake synchronous.
+    // Models resolve once, before any view exists: `parts` bake, the authored
+    // GLBs are fetched. Awaiting here keeps every downstream bake synchronous.
     await preloadModels(theme.objects.flatMap((def) => [def.model, ...(def.pieces ?? [])]));
 
     const scene = createScene(theme);
