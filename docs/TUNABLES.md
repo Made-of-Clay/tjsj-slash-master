@@ -73,6 +73,28 @@ Theme `spawnRules` (both themes; a theme owns these):
 | `CUT.life`           | 1.5 s   | Piece lifetime.                                  |
 | `CUT.capacity`       | 64      | Debris ring size.                                |
 
+## Blade trail
+
+| Key                    | Value  | Notes                     |
+| ---------------------- | ------ | ------------------------- |
+| `BLADE.maxPoints`      | 32     | Samples; tail cap.        |
+| `BLADE.width`          | 0.24 u | Head width (~10 px).      |
+| `BLADE.taperStart`     | 0.3    | Taper fraction.           |
+| `BLADE.headSwell`      | 1.08   | Head swell.               |
+| `BLADE.tailFade`       | 0.5    | Tail alpha ramp.          |
+| `BLADE.edgeIntensity`  | 0.45   | Edge tint vs core.        |
+| `BLADE.tintWhiteMix`   | 0.65   | 0 = theme hue, 1 = white. |
+| `BLADE.tailSeconds`    | 0.14 s | Sample lifetime.          |
+| `BLADE.fadeSeconds`    | 0.16 s | Release fade; 0 snaps.    |
+| `BLADE.flashSeconds`   | 0.1 s  | Cut flash decay.          |
+| `BLADE.flashWidth`     | 0.5    | Flash width.              |
+| `BLADE.flashIntensity` | 0.6    | Flash brightness.         |
+
+| Theme     | `palette.blade` |
+| --------- | --------------- |
+| Halloween | `#ff8a3d`       |
+| Christmas | `#8fd6ff`       |
+
 ## Score + juice
 
 | Key                         | Value     | Notes                                                     |

@@ -85,6 +85,15 @@ export interface ThemeGradient {
     vignetteStrength: number;
 }
 
+/** Non-background colours the theme owns. */
+export interface ThemePalette {
+    /**
+     * Blade trail tint, sRGB hex. Rendering normalises it to full brightness
+     * before mixing toward white, so this is a hue, not a final colour.
+     */
+    blade: string;
+}
+
 /** Light colour tints; intensities live in `config.ts`. */
 export interface ThemeLighting {
     ambient: string;
@@ -104,6 +113,7 @@ export interface ThemeAccents {
 export interface Theme {
     id: string;
     background: ThemeGradient;
+    palette: ThemePalette;
     lighting: ThemeLighting;
     accents: ThemeAccents;
     objects: GameObjectDefinition[];

@@ -101,20 +101,20 @@ Rules: rows are permanent. A reversal gets a dated **superseded by** note on the
 
 ## Step 9 — polish
 
-| ID  | Decision                                                                                                                          |
-| --- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 9A  | Sparks = one `InstancedMesh` per category over one unit shard; per-instance colour unproven on `WebGPURenderer`.                  |
-| 9B  | Shake = scalar trauma, quadratic falloff, applied after `syncViewport` from the captured base pose.                               |
-| 9C  | Combo = time-window chain; the k-th cut banks `COMBO.step × (k − 1)` and pays on window lapse (re-keyed from stroke, 2026-10-26). |
-| 9D  | Hazard = third category, negative score, max shake, never ends the round.                                                         |
-| 9E  | Spawn rarity = per-def `weight`, prefix sums at construction.                                                                     |
-| 9F  | Records = guarded `localStorage`, in-memory fallback, write only on a beaten score.                                               |
-| 9G  | Audio = procedural synth, unlocked inside the first gesture, one context per page.                                                |
-| 9H  | Haptics = `navigator.vibrate`, silent no-op where absent, follows mute.                                                           |
-| 9I  | Flow = start card + pause card; restart skips the start card; hidden-tab pause stays authoritative.                               |
-| 9J  | Verification = `verify:polish` for audio/haptics/records/flow; sparks/shake → perf, combo → rules, hazard/weight → content.       |
-| 9K  | Draw budget ≤ 17 while swiping: 12 instanced + 3 spark meshes + background + blade trail.                                         |
-| 9L  | No deps, no assets; app chunk +3.2 kB gzip (target was ~2.5).                                                                     |
+| ID  | Decision                                                                                                                    |
+| --- | --------------------------------------------------------------------------------------------------------------------------- |
+| 9A  | Sparks = one `InstancedMesh` per category over one shard; per-instance colour unproven.                                     |
+| 9B  | Shake = scalar trauma, quadratic falloff, applied after `syncViewport` from the captured base pose.                         |
+| 9C  | Combo = time-window chain: the k-th cut banks `COMBO.step × (k − 1)`, paid on lapse (re-keyed 2026-10-26).                  |
+| 9D  | Hazard = third category, negative score, max shake, never ends the round.                                                   |
+| 9E  | Spawn rarity = per-def `weight`, prefix sums at construction.                                                               |
+| 9F  | Records = guarded `localStorage`, in-memory fallback, write only on a beaten score.                                         |
+| 9G  | Audio = procedural synth, unlocked inside the first gesture, one context per page.                                          |
+| 9H  | Haptics = `navigator.vibrate`, silent no-op where absent, follows mute.                                                     |
+| 9I  | Flow = start card + pause card; restart skips the start card; hidden-tab pause stays authoritative.                         |
+| 9J  | Verification = `verify:polish` for audio/haptics/records/flow; sparks/shake → perf, combo → rules, hazard/weight → content. |
+| 9K  | Draw budget ≤ 17 while swiping: 12 instanced + 3 sparks + background + trail.                                               |
+| 9L  | No deps, no assets; app chunk +3.2 kB gzip (target ~2.5).                                                                   |
 
 ## Step 10 — content pipeline
 
@@ -133,18 +133,28 @@ Rules: rows are permanent. A reversal gets a dated **superseded by** note on the
 
 ## Step 11 — card object legend
 
-| ID  | Decision                                                                                                      |
-| --- | ------------------------------------------------------------------------------------------------------------- |
-| 11A | Legend appears on start, pause and game-over cards; one shared row builder per card.                           |
-| 11B | Thumbnails = boot-time CPU orthographic z-buffer over the theme's baked geometry; no GPU readback, no art.     |
-| 11C | `name` lives in `GameObjectDefinition`; `main.ts` hands the HUD `{ name, score, icon }` primitives.            |
-| 11D | Rendered once at boot as PNG data URLs; three cards reuse the URL, steady frame unchanged.                    |
+| ID  | Decision                                                                                                   |
+| --- | ---------------------------------------------------------------------------------------------------------- |
+| 11A | Legend appears on start, pause and game-over cards; one shared row builder per card.                       |
+| 11B | Thumbnails = boot-time CPU orthographic z-buffer over the theme's baked geometry; no GPU readback, no art. |
+| 11C | `name` lives in `GameObjectDefinition`; `main.ts` hands the HUD `{ name, score, icon }` primitives.        |
+| 11D | Rendered once at boot as PNG data URLs; three cards reuse the URL, steady frame unchanged.                 |
 
 ## Step 12 — assets
 
-| ID  | Decision                                                                                                              |
-| --- | --------------------------------------------------------------------------------------------------------------------- |
-| 12A | One GLB per authored model, fetched at boot; everything else bakes.                                                   |
-| 12B | GLB flattens to one merged vertex-coloured geometry; materials and emission dropped.                                |
-| 12C | Assets are binned: centred, max extent = `size`; spawn fit unchanged.                                                 |
-| 12D | `preloadModels` takes an `AssetBytes` reader: bun cannot `fetch` `file:` URLs.                                        |
+| ID  | Decision                                                                       |
+| --- | ------------------------------------------------------------------------------ |
+| 12A | One GLB per authored model, fetched at boot; everything else bakes.            |
+| 12B | GLB flattens to one vertex-coloured geometry; materials and emission dropped.  |
+| 12C | Assets are binned: centred, max extent = `size`; spawn fit unchanged.          |
+| 12D | `preloadModels` takes an `AssetBytes` reader: bun cannot `fetch` `file:` URLs. |
+
+## Step 13 — blade trail
+
+| ID  | Decision                                                                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13A | Blade = one additive ribbon, 3 verts/sample, `depthTest: false`; width, fade, tint are config.                                                          |
+| 13B | Tail = a time window, not a sample count; a release fades over `BLADE.fadeSeconds`.                                                                     |
+| 13C | Tint = a theme colour, normalised to full brightness then mixed to white in `main.ts`; `rendering/` stays content-free. Superseded by 13E (2026-10-30). |
+| 13D | A cut flash widens + brightens; reduced motion skips fade and flash.                                                                                    |
+| 13E | `ThemePalette.blade` owns the blade hue: `background.top` gave both themes the same teal.                                                               |

@@ -62,6 +62,9 @@ Step 8 (perf pass):
 - `Input` — one reused `SwipeSegment` wrapper (the old one allocated per move).
 - `BladeTrail` — point ring preallocated; adding a sample copies into it
   (`clone()` and `shift()` are gone).
+- Step 13: the trail is one additive ribbon — position/colour arrays and the
+  index buffer are built once, `writeGeometry` overwrites in place, and the
+  age trim only moves `first`/`count`. Still one draw.
 - `verify:perf` statically guards those hot bodies against allocation
   constructs, so the rule is enforced rather than remembered.
 

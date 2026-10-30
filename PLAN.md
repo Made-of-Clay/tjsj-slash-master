@@ -27,6 +27,7 @@ Gameplay / rendering / content are separate: a theme is data plus one registry e
 | default theme, `?theme=`, manifest         | [step 10](docs/PLAN-STEP-10-content.md) · 10A–10J                               |
 | card legend, object thumbnails             | [step 11](docs/PLAN-STEP-11-legend.md) · 11A–11D                                |
 | authored GLB, boot preload, asset bake     | [step 12](docs/PLAN-STEP-12-assets.md) · 12A–12D                                |
+| blade, trail, slash visual, ribbon         | [step 13](docs/PLAN-STEP-13-blade.md) · 13A–13E                                 |
 | **numbers / feel tuning**                  | [TUNABLES](docs/TUNABLES.md) — nothing else                                     |
 | **why a choice was made**                  | [DECISIONS](docs/DECISIONS.md) — grep the ID, e.g. `9C`                         |
 | **what is done / next / blocked**          | [STATE](STATE.md)                                                               |
@@ -46,7 +47,7 @@ Every step doc opens with the same six fields — `Scope`, `Contracts`, `Files`,
 
 Order is history, not a reading list. Router decides what to open.
 
-1 foundation · 2 playfield · 3 launching · 4 swipe · 5 cutting · 6 rules · 7 content · 8 perf · 9 polish · 10 content pipeline · 11 legend · 12 assets
+1 foundation · 2 playfield · 3 launching · 4 swipe · 5 cutting · 6 rules · 7 content · 8 perf · 9 polish · 10 content pipeline · 11 legend · 12 assets · 13 blade
 
 ## Verify
 

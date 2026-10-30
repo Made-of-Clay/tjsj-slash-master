@@ -13,6 +13,9 @@ Index: [PLAN.md](../PLAN.md).
 > already emits world-space `SwipeSegment`s and `BladeTrail` draws them. Step 4 is
 > the _system_ around them — sim-loop integration + gating. The `Collision` stub's
 > "Step 4" header comment is stale; the hit test is step 5 (per AGENTS.md).
+>
+> **Trail polish (deferred from E) landed as [step 13](PLAN-STEP-13-blade.md):**
+> ribbon width, taper, tail fade, release fade, theme tint, cut flash.
 
 ## Session start (before workstream A)
 

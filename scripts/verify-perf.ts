@@ -34,14 +34,16 @@ import {
     Scene,
     Vector3,
 } from 'three/webgpu';
-import { CUT, EFFECTS, POOL_SIZE, SHAKE } from '../src/config.ts';
+import { BLADE, CUT, EFFECTS, POOL_SIZE, SHAKE } from '../src/config.ts';
 import type { Theme } from '../src/content/types.ts';
+import type { BufferGeometry, Color, Mesh } from 'three/webgpu';
 import { christmas } from '../src/content/themes/christmas.ts';
 import { halloween } from '../src/content/themes/halloween.ts';
 import { createObjectViews, syncViews } from '../src/rendering/ObjectViews.ts';
 import { createDebrisViews, syncDebrisViews } from '../src/rendering/DebrisViews.ts';
 import { createSparkViews, syncSparkViews } from '../src/rendering/SparkViews.ts';
 import { createShake } from '../src/rendering/Shake.ts';
+import { bladeTint, createBladeTrail } from '../src/rendering/BladeTrail.ts';
 import { preloadModels } from '../src/rendering/ModelAssets.ts';
 import { readAssetBytes } from './read-asset.ts';
 import { Effects } from '../src/game/Effects.ts';
@@ -434,6 +436,108 @@ console.log('Screen shake');
     check('reset drops trauma and restores the base pose', shake.trauma === 0);
 }
 
+// ===== blade trail =====
+console.log('Blade trail');
+
+/** Half-height of the drawn ribbon, in world units. */
+function ribbonHalfHeight(geometry: BufferGeometry): number {
+    const position = geometry.getAttribute('position');
+    const array = position.array as Float32Array;
+    const samples = geometry.drawRange.count / 12 + 1;
+    let max = 0;
+    for (let index = 1; index < samples * 9; index += 3) {
+        max = Math.max(max, Math.abs(array[index]));
+    }
+    return max;
+}
+
+{
+    const scene = new Scene();
+    const trail = createBladeTrail(scene, { tint: '#0e2730' });
+    const mesh = scene.children[0] as Mesh;
+    const geometry = mesh.geometry as BufferGeometry;
+
+    check('the trail is one mesh', scene.children.length === 1);
+    check('the ribbon is indexed', geometry.index !== null);
+
+    trail.update(0);
+    trail.start(new Vector3(0, 0, 0));
+    trail.add(new Vector3(1, 0, 0));
+    trail.add(new Vector3(2, 0, 0));
+    trail.update(0);
+
+    check(
+        'three samples draw two segments',
+        geometry.drawRange.count === 24,
+        `${geometry.drawRange.count}`,
+    );
+    check('the trail is visible mid-stroke', mesh.visible);
+
+    const flat = ribbonHalfHeight(geometry);
+    trail.flash();
+    trail.update(0);
+    const flashed = ribbonHalfHeight(geometry);
+    check('a cut flash widens the ribbon', flashed > flat, `${flat} -> ${flashed}`);
+
+    trail.update(500);
+    check('a held stroke ages its tail out', !mesh.visible);
+
+    trail.add(new Vector3(3, 0, 0));
+    trail.add(new Vector3(4, 0, 0));
+    trail.update(500);
+    check('a stroke resumes after the tail aged out', mesh.visible);
+
+    trail.end();
+    trail.update(520);
+    check('a release keeps the ribbon while it fades', mesh.visible);
+    trail.update(570);
+    trail.update(620);
+    trail.update(670);
+    check('a release fades the ribbon out', !mesh.visible);
+
+    const stillScene = new Scene();
+    const still = createBladeTrail(stillScene, { tint: '#0e2730', reducedMotion: true });
+    const stillMesh = stillScene.children[0] as Mesh;
+    const stillGeometry = stillMesh.geometry as BufferGeometry;
+
+    still.update(0);
+    still.start(new Vector3(0, 0, 0));
+    still.add(new Vector3(1, 0, 0));
+    still.add(new Vector3(2, 0, 0));
+    still.update(0);
+    const stillFlat = ribbonHalfHeight(stillGeometry);
+    still.flash();
+    still.update(0);
+    check('reduced motion skips the cut flash', ribbonHalfHeight(stillGeometry) === stillFlat);
+
+    still.end();
+    still.update(20);
+    check('reduced motion snaps off instead of fading', !stillMesh.visible);
+
+    check('fade is a config knob', BLADE.fadeSeconds >= 0);
+
+    // 2026-10-30 bug: `palette.top` is near-black, so a straight lerp to white
+    // left chroma 0.009 — the knob moved the colour but no hue survived.
+    const hue = bladeTint('#0e2730', 0);
+    const light = bladeTint('#0e2730', BLADE.tintWhiteMix);
+    const white = bladeTint('#0e2730', 1);
+    const chroma = (c: Color): number => Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b);
+
+    check('the tint keeps the theme hue at mix 0', chroma(hue) > 0.5, `${chroma(hue)}`);
+    check(
+        'tintWhiteMix lightens without erasing the hue',
+        chroma(light) > 0.15 && light.r > hue.r,
+        `chroma ${chroma(light)}`,
+    );
+    check('mix 1 is white', chroma(white) === 0 && white.r === 1);
+
+    const colors = geometry.getAttribute('color');
+    const edgeChroma =
+        Math.max(colors.getX(6), colors.getY(6), colors.getZ(6)) -
+        Math.min(colors.getX(6), colors.getY(6), colors.getZ(6));
+    check('the tinted edge reaches the ribbon', edgeChroma > 0.05, `${edgeChroma}`);
+}
+
 // ===== allocation guard =====
 console.log('Allocation guard');
 
@@ -475,6 +579,8 @@ const GUARDED: ReadonlyArray<readonly [string, string]> = [
     ['game/Slicer.ts', 'cut(pool'],
     ['game/Input.ts', '#emit(event'],
     ['rendering/BladeTrail.ts', 'function add(world'],
+    ['rendering/BladeTrail.ts', 'function writeGeometry()'],
+    ['rendering/BladeTrail.ts', 'function update(nowMs'],
     ['game/Effects.ts', 'step(dt'],
     ['rendering/SparkViews.ts', 'export function syncSparkViews'],
     ['rendering/Shake.ts', 'function apply()'],

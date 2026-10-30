@@ -73,6 +73,37 @@ export const SWIPE = {
     gateDistance: 0.5,
 } as const;
 
+// ===== BLADE =====
+// The slash visual (step 13). Widths are world units on the play plane; on a
+// 568 px-tall phone 14 u of field is ~40 px/u, so 0.24 u reads ~10 px. Additive
+// blending means fade is written into RGB, not alpha.
+export const BLADE = {
+    /** Ribbon samples; also the tail length cap in samples. */
+    maxPoints: 32,
+    /** Full ribbon width at the head, world units. */
+    width: 0.24,
+    /** Fraction of the ribbon the tail spends tapering in from zero. */
+    taperStart: 0.3,
+    /** Head width multiplier — a slight swell reads as a leading edge. */
+    headSwell: 1.08,
+    /** Fraction of the ribbon whose alpha ramps 0 → 1 from the tail. */
+    tailFade: 0.15,
+    /** Edge colour as a fraction of the core; 0 = plain white ribbon. */
+    edgeIntensity: 0.45,
+    /** How far the theme tint is mixed toward white; additive needs headroom. */
+    tintWhiteMix: 0.05,
+    /** Seconds a sample survives behind the pointer before the tail drops it. */
+    tailSeconds: 0.14,
+    /** Seconds a released stroke takes to fade out. 0 = snap off. */
+    fadeSeconds: 0.16,
+    /** Seconds the cut flash takes to decay. */
+    flashSeconds: 0.1,
+    /** Extra width at peak flash, as a fraction of `width`. */
+    flashWidth: 0.5,
+    /** Extra brightness at peak flash, as a fraction of base. */
+    flashIntensity: 0.6,
+} as const;
+
 // ===== CUT =====
 // Cutting (step 5). `pad` widens each object's bounding sphere for the hit
 // test — forgiveness on the swipe path, since a zero-thickness segment

@@ -16,6 +16,10 @@ export const christmas: Theme = {
         vignette: '#000000',
         vignetteStrength: 0.55,
     },
+    // Ice hue: reads cold against the navy field.
+    palette: {
+        blade: '#8fd6ff',
+    },
     lighting: {
         ambient: '#dfe9ff',
         key: '#ffffff',

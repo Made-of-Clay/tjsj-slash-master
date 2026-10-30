@@ -2,6 +2,32 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-30
+
+### Step 13 — blade trail
+
+- `rendering/BladeTrail.ts`: `LineBasicMaterial` hairline → one additive ribbon,
+  3 verts per sample, preallocated arrays and a once-filled index buffer. Width
+  is a world-unit number now; `linewidth` never was.
+- Tail is a time window (`BLADE.tailSeconds`), so a held pointer no longer
+  leaves a permanent snake; `end()` fades over `BLADE.fadeSeconds` instead of
+  snapping off; `flash()` on a cut widens and brightens for a beat.
+- Tint derives from `theme.background.top` (lightened toward white for additive
+  headroom) in `main.ts`; `rendering/` still imports no content.
+- `depthTest: false` — the blade draws over fruit, so no z lift is needed.
+- Reduced motion (`prefers-reduced-motion`) snaps off and skips the flash.
+- `config.ts` `BLADE` block; `verify:perf` guards `writeGeometry`/`update` and
+  asserts the tail trim, flash width, fade and reduced-motion paths (93 checks).
+- Draw budget unchanged at 17: the trail is still one draw.
+- `ThemePalette.blade` (`content/types.ts`, both themes): the blade hue is theme
+  data now — ember `#ff8a3d` for halloween, ice `#8fd6ff` for christmas. Deriving
+  from `background.top` made both blades the same teal (13E supersedes 13C).
+  `verify:content` 160 → 165 checks (hex, own-choice, distinct hues).
+- Fix: `BLADE.tintWhiteMix` was inert. `palette.top` is near-black in linear
+  space, so lerping it to white left chroma 0.009. The tint is now normalised to
+  full brightness first, making the knob a real saturation slider (0.30 chroma
+  at 0.65); `verify:perf` asserts the hue survives (97 checks).
+
 ## 2026-10-29
 
 ### Skull ships as an authored asset

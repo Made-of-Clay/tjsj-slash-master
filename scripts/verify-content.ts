@@ -105,6 +105,11 @@ console.log('Registry');
 
 // ===== theme contract =====
 console.log('Theme contract');
+check(
+    'themes pick distinct blade hues',
+    new Set(THEME_IDS.map((id) => THEMES[id].palette.blade.toLowerCase())).size ===
+        THEME_IDS.length,
+);
 for (const id of THEME_IDS) {
     const theme = THEMES[id];
     const tag = theme.id;
@@ -173,6 +178,11 @@ for (const id of THEME_IDS) {
     check(
         `[${tag}] accent colours are hex`,
         Object.values(theme.accents).every((value) => HEX.test(value)),
+    );
+    check(`[${tag}] blade colour is hex`, HEX.test(theme.palette.blade));
+    check(
+        `[${tag}] blade colour is its own choice`,
+        theme.palette.blade.toLowerCase() !== theme.background.top.toLowerCase(),
     );
 
     const rules = theme.spawnRules;

@@ -29,8 +29,10 @@ const BUDGETS: Budget[] = [
     { file: 'PLAN.md', lines: 80, words: 650 },
     { file: 'AGENTS.md', lines: 90, words: 550 },
     { file: 'STATE.md', lines: 30, words: 200 },
-    { file: 'docs/DECISIONS.md', lines: 160, words: 1500 },
-    { file: 'docs/TUNABLES.md', lines: 140, words: 1100 },
+    // Step 13 added a decision block; the ceilings moved once.
+    { file: 'docs/DECISIONS.md', lines: 165, words: 1600 },
+    // Step 13 added a knob block; headroom for the blade tuning pass.
+    { file: 'docs/TUNABLES.md', lines: 145, words: 1150 },
 ];
 
 const HEADER_FIELDS = [
@@ -83,7 +85,7 @@ for (const link of linked) {
 const stepDocs = readdirSync('docs')
     .filter((name) => /^PLAN-STEP-\d+.*\.md$/.test(name))
     .sort((a, b) => Number(a.split('-')[2]) - Number(b.split('-')[2]));
-check('twelve step docs exist', stepDocs.length === 12, `${stepDocs.length} found`);
+check('thirteen step docs exist', stepDocs.length === 13, `${stepDocs.length} found`);
 for (const doc of stepDocs) {
     check(`router covers docs/${doc}`, plan.includes(`docs/${doc}`));
 }
@@ -110,7 +112,7 @@ check('STATE.md names what is next', state.includes('**Next'));
 // ===== decisions =====
 console.log('\nDecisions');
 const decisions = read('docs/DECISIONS.md');
-for (let step = 1; step <= 12; step += 1) {
+for (let step = 1; step <= 13; step += 1) {
     check(`decisions cover step ${step}`, decisions.includes(`## Step ${step} `));
 }
 const byId = new Set([...decisions.matchAll(/^\| (\d{1,2}[A-Z]) /gm)].map((m) => m[1]));

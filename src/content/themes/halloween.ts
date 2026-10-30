@@ -21,6 +21,10 @@ export const halloween: Theme = {
         vignette: '#000000',
         vignetteStrength: 0.6,
     },
+    // Ember hue: the blade fringe ties to the pumpkin/candy warmth.
+    palette: {
+        blade: '#ff8a3d',
+    },
     lighting: {
         ambient: '#ffffff',
         key: '#fff4e0',

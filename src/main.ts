@@ -222,7 +222,12 @@ async function boot(): Promise<void> {
 
     const input = new Input(canvas, createSwipeProjector(camera));
 
-    const bladeTrail = createBladeTrail(scene, 32);
+    // Step 13: the trail is one additive ribbon; the theme owns the hue and the
+    // trail normalises it for additive headroom.
+    const bladeTrail = createBladeTrail(scene, {
+        tint: theme.palette.blade,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    });
     input.onStrokeStart((w) => bladeTrail.start(w));
     input.onStrokeMove((w) => bladeTrail.add(w));
     input.onStrokeEnd(() => bladeTrail.end());
@@ -305,6 +310,8 @@ async function boot(): Promise<void> {
 
         const cuts = slicer.cut(objects, segment);
         if (cuts > 0) {
+            // Step 13: the blade brightens for a beat so the hit reads.
+            bladeTrail.flash();
             // Step 9B: the chain banks its own bonus; `combo.step` pays it out.
             const count = combo.register(cuts);
             if (count > 1) audio.play('combo', count);
@@ -431,6 +438,9 @@ async function boot(): Promise<void> {
             syncViews(objectViews, objects.items);
             syncDebrisViews(debrisViews, debris.pieces);
             syncSparkViews(sparkViews, effects.sparks);
+            // Presentation-only clock: the trail's tail, fade and flash are
+            // visual, never part of the fixed-step sim (Decision 4E).
+            bladeTrail.update(performance.now());
             // HUD reads latest state (never steps); both calls no-op when
             // nothing changed, so the steady frame does no DOM work.
             const liveCombo = round.over ? 0 : combo.count;
