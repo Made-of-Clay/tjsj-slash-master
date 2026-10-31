@@ -18,10 +18,11 @@ Rules: rows are permanent. A reversal gets a dated **superseded by** note on the
 | ID  | Decision                                                                                                          |
 | --- | ----------------------------------------------------------------------------------------------------------------- |
 | 2A  | Straight-on modest perspective; `z = 0` is view-perpendicular, so fit math is exact.                              |
-| 2B  | Full-width aspect policy (supersedes fit-bounds): field spans the screen width, `sideMargin` guards edge objects. |
-| 2C  | Background via `scene.backgroundNode` (TSL) — themeable, one fragment, no extra geometry.                         |
-| 2D  | Height fixed, width derived from aspect (supersedes portrait-first): camera distance is constant across devices.  |
-| 2E  | No shadow maps — matches `PERF-BUDGET`; nothing needs them.                                                       |
+| 2B  | Full-width aspect policy (supersedes fit-bounds): field spans screen width, `sideMargin` guards edges.           | 
+| 2C  | Background via `scene.backgroundNode` (TSL) — themeable, one fragment, no geometry.                              | 
+| 2D  | Height fixed, width from aspect (supersedes portrait-first): camera distance constant across devices.            | 
+| 2E  | No shadow maps — matches `PERF-BUDGET`.                                                                          | 
+| 2F  | Optional art: cover-fitted, cropped; no letterbox.                                                                |
 
 ## Step 3 — launching
 

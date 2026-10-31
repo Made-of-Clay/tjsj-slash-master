@@ -19,7 +19,9 @@ export const halloween: Theme = {
         top: '#0e2730',
         bottom: '#03080b',
         vignette: '#000000',
-        vignetteStrength: 0.6,
+        // The art carries its own falloff; a strong vignette would bury it.
+        vignetteStrength: 0.25,
+        image: new URL('./halloween-background-dark.png', import.meta.url).href,
     },
     // Ember hue: the blade fringe ties to the pumpkin/candy warmth.
     palette: {

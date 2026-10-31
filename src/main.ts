@@ -23,10 +23,12 @@ import {
     SWIPE,
     TONE_MAPPING,
     TONE_MAPPING_EXPOSURE,
+    OBJECT_MATERIAL,
 } from './config';
 import type { ToneMappingMode } from './config';
 import { getTheme, resolveThemeId } from './content/themes';
 import { preloadModels } from './rendering/ModelAssets';
+import { loadBackgroundImage } from './rendering/Materials';
 import { GameLoop } from './game/GameLoop';
 import { Input } from './game/Input';
 import type { SwipeSegment } from './game/Input';
@@ -110,11 +112,15 @@ async function boot(): Promise<void> {
         themeColorMeta.content = theme.background.top;
     }
 
-    // Models resolve once, before any view exists: `parts` bake, the authored
-    // GLBs are fetched. Awaiting here keeps every downstream bake synchronous.
-    await preloadModels(theme.objects.flatMap((def) => [def.model, ...(def.pieces ?? [])]));
+    // Models and theme art resolve once, before any view exists: `parts` bake,
+    // the authored GLBs and the background image are fetched. Awaiting here
+    // keeps every downstream bake synchronous.
+    const [backgroundImage] = await Promise.all([
+        theme.background.image ? loadBackgroundImage(theme.background.image) : undefined,
+        preloadModels(theme.objects.flatMap((def) => [def.model, ...(def.pieces ?? [])])),
+    ]);
 
-    const scene = createScene(theme);
+    const scene = createScene(theme, backgroundImage);
 
     const camera = createCamera(canvas.clientWidth / canvas.clientHeight);
     // Live playfield: width is derived from the aspect, so gameplay reads its
@@ -453,6 +459,12 @@ async function boot(): Promise<void> {
                 audio.play('over');
                 pulse('over');
             }
+            const flashPhase = (performance.now() / 1000 / OBJECT_MATERIAL.hazardFlashSeconds) % 1;
+            const triangle = Math.abs(flashPhase * 2 - 1);
+            const intensity =
+                OBJECT_MATERIAL.hazardFlashMax -
+                triangle * (OBJECT_MATERIAL.hazardFlashMax - OBJECT_MATERIAL.hazardFlashMin);
+            objectViews.materials.hazard.emissiveIntensity = intensity;
             renderer.render(scene, camera);
             if (DEBUG_PERF) logPerf();
             stats?.end();

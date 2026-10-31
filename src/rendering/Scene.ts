@@ -1,5 +1,5 @@
 import { AmbientLight, DirectionalLight, Scene } from 'three/webgpu';
-import type { Node } from 'three/webgpu';
+import type { Node, Texture } from 'three/webgpu';
 import { LIGHTING } from '../config';
 import type { Theme } from '../content/types';
 import { createBackgroundNode } from './Materials';
@@ -14,11 +14,14 @@ type SceneWithBackgroundNode = Scene & { backgroundNode: Node | null };
  * separate objects from the background. Tints come from the theme; intensities
  * intensities live in config.ts (LIGHTING). No shadow maps (decision E).
  */
-export function createScene(theme: Theme): Scene {
+export function createScene(theme: Theme, backgroundImage?: Texture): Scene {
     const scene = new Scene();
 
     // Decision C: the themeable TSL background is the single source of truth.
-    (scene as SceneWithBackgroundNode).backgroundNode = createBackgroundNode(theme.background);
+    (scene as SceneWithBackgroundNode).backgroundNode = createBackgroundNode(
+        theme.background,
+        backgroundImage,
+    );
 
     const lights = theme.lighting;
 

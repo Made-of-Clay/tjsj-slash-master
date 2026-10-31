@@ -4,6 +4,23 @@ Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log
 
 ## 2026-10-30
 
+### Halloween background art
+
+- `content/themes/halloween-background.jpeg` (1024², sRGB) is the halloween
+  background. `ThemeGradient.image` (optional URL) carries it; `createBackgroundNode`
+  samples it cover-fitted via `screenUV`/`screenSize`, so it stays centred, fills
+  the window and crops the overflowing axis — no letterbox bars at any aspect.
+- `rendering/Materials.ts`: `loadBackgroundImage` (`TextureLoader`, sRGB);
+  `main.ts` fetches it alongside the models, before the scene exists.
+- Halloween `vignetteStrength` 0.6 → 0.25: the art has its own falloff.
+- Fix: cover had the crop fractions swapped — a wide window cropped x instead
+  of y, so a 1:1 image filled the height and stretched across the width. It now
+  crops the axis that actually overflows.
+- Fix: `screenUV` is top-down (y = 0 at the top) in both backends, while a
+  flipY upload puts the image's bottom row at v = 0 — the art rendered upside
+  down. v is inverted for the image, and the gradient (christmas) now puts
+  `top` at the top, matching `ThemeGradient`'s contract.
+
 ### Step 13 — blade trail
 
 - `rendering/BladeTrail.ts`: `LineBasicMaterial` hairline → one additive ribbon,

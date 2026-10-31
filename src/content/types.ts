@@ -83,6 +83,11 @@ export interface ThemeGradient {
     vignette: string;
     /** 0 = no vignette, 1 = corners fully `vignette`. */
     vignetteStrength: number;
+    /**
+     * Optional background art, cover-fitted: centred and scaled to fill the
+     * window, cropped on the overflowing axis, never letterboxed.
+     */
+    image?: string;
 }
 
 /** Non-background colours the theme owns. */

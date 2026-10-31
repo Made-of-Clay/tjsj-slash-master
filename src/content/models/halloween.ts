@@ -93,7 +93,7 @@ export function createBombModel(): ObjectModel {
             },
             {
                 geometry: new SphereGeometry(0.03, 8, 6),
-                color: '#ff7a45',
+                color: '#3a3c46',
                 position: [0.29, 0.39, 0],
             },
         ],

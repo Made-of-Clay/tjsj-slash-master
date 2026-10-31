@@ -137,7 +137,10 @@ export const OBJECT_MATERIAL = {
     /** Category accent emissive. */
     targetEmissive: 0.06,
     restrictedEmissive: 0.25,
-    hazardEmissive: 0.5,
+    hazardEmissive: 0.1,
+    hazardFlashSeconds: 0.75,
+    hazardFlashMin: 0,
+    hazardFlashMax: 0.5,
 } as const;
 
 // ===== PLAYFIELD =====
