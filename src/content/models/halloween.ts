@@ -1,4 +1,4 @@
-import { CircleGeometry, ConeGeometry, CylinderGeometry, SphereGeometry } from 'three/webgpu';
+import { CircleGeometry, CylinderGeometry, SphereGeometry } from 'three/webgpu';
 import type { ObjectModel } from '../types';
 
 /**
@@ -8,10 +8,11 @@ import type { ObjectModel } from '../types';
 
 /**
  * Authored GLBs (`src/content/models/<model>/`), normalised to `size` at boot.
- * Both face +Z, so they need no rotation to face the camera.
+ * All face +Z, so they need no rotation to face the camera.
  */
 const PUMPKIN_URL = new URL('./pumpkin/pumpkin.glb', import.meta.url).href;
 const SKULL_URL = new URL('./skull/skull.glb', import.meta.url).href;
+const CANDY_URL = new URL('./candy/candy.glb', import.meta.url).href;
 
 export function createPumpkinModel(): ObjectModel {
     return { kind: 'asset', url: PUMPKIN_URL, size: 1 };
@@ -42,30 +43,9 @@ function pumpkinHalf(phiStart: number, capYaw: number): ObjectModel {
     };
 }
 
+/** Authored GLB (`src/content/models/candy/`), normalised to `size` at boot. */
 export function createCandyModel(): ObjectModel {
-    return {
-        kind: 'parts',
-        size: 1.15,
-        parts: [
-            {
-                geometry: new CylinderGeometry(0.25, 0.25, 0.5, 12),
-                color: '#ffbf3f',
-                rotation: [0, 0, Math.PI / 2],
-            },
-            {
-                geometry: new ConeGeometry(0.225, 0.34, 8),
-                color: '#f7f0d8',
-                position: [0.4, 0, 0],
-                rotation: [0, 0, -Math.PI / 2],
-            },
-            {
-                geometry: new ConeGeometry(0.225, 0.34, 8),
-                color: '#f7f0d8',
-                position: [-0.4, 0, 0],
-                rotation: [0, 0, Math.PI / 2],
-            },
-        ],
-    };
+    return { kind: 'asset', url: CANDY_URL, size: 1.1 };
 }
 
 /** Authored GLB (`src/content/models/skull/`), normalised to `size` at boot. */

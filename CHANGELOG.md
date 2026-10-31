@@ -2,6 +2,18 @@
 
 Record **ultra-terse** changes below. Sentence fragments okay if clear. Only log relevant details. Agents aren't blogging.
 
+## 2026-10-31
+
+### Candy ships as an authored asset
+
+- `content/models/candy/`: generator, `.blend`, `.glb` (900 tris, 27 628 B) and the
+  four previews. Ellipsoid sweet, two-strand wax ribbon helixed around it, pleated
+  fan wrapper pinched into each end; solid flat colours, no transparency or maps.
+- `content/models/halloween.ts`: `createCandyModel` returns the GLB at `size: 1.1`
+  (widest def — 7.9 % of the viewport, inside the 8 % budget); the procedural
+  cylinder + two cones are gone.
+- `verify:content` 165 → 168 checks (candy tri/byte/viewport budget).
+
 ## 2026-10-30
 
 ### Halloween background art

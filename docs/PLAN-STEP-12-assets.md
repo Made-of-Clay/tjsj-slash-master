@@ -2,10 +2,10 @@
 
 Index: [PLAN.md](../PLAN.md).
 
-- **Scope** — the halloween pumpkin and skull ship as authored GLBs under `src/content/models/`, fetched once at boot; every other model stays procedural.
+- **Scope** — the halloween pumpkin, skull and candy ship as authored GLBs under `src/content/models/`, fetched once at boot; every other model stays procedural.
 - **Contracts** — `preloadModels` runs before any view exists and `modelGeometry` never fetches; a GLB flattens to one indexed vertex-coloured geometry, uv/tangent dropped, centred, max extent = `size`; an asset bakes to the same shape as `parts`; gameplay still reads only `size`.
-- **Files** — `rendering/ModelAssets.ts`, `Model.ts`, `ObjectViews.ts`, `DebrisViews.ts`, `ui/objectIcons.ts`, `content/models/halloween.ts`, `content/models/skull/`, `content/types.ts`, `main.ts`, `vite.config.ts`, `scripts/read-asset.ts`, `verify-content.ts`, `verify-perf.ts`.
-- **Acceptance** — `verify-content` reads each committed GLB and runs the shared flatten (fit, centre, icon pixels, tri/byte/viewport budget); `vite build` emits one hashed `.glb` per asset, precached by the service worker; pumpkin and skull both read at `size: 1`.
+- **Files** — `rendering/ModelAssets.ts`, `Model.ts`, `ObjectViews.ts`, `DebrisViews.ts`, `ui/objectIcons.ts`, `content/models/halloween.ts`, `content/models/skull/`, `content/models/candy/`, `content/types.ts`, `main.ts`, `vite.config.ts`, `scripts/read-asset.ts`, `verify-content.ts`, `verify-perf.ts`.
+- **Acceptance** — `verify-content` reads each committed GLB and runs the shared flatten (fit, centre, icon pixels, tri/byte/viewport budget); `vite build` emits one hashed `.glb` per asset, precached by the service worker; pumpkin and skull read at `size: 1`, candy at `1.1` (its widest def).
 - **Not doing** — glTF materials or emission at runtime, DRACO/KTX2, authored halves for either asset, a general asset pipeline or picker.
 - **Decisions** — 12A–12D.
 
