@@ -14,6 +14,8 @@ export interface HudObject {
 export interface Hud {
     /** Push the latest score / seconds-left / cuts in the live combo chain. */
     sync(score: number, secondsLeft: number, combo: number): void;
+    /** Stop and remove a live combo immediately, without linger or fade. */
+    killCombo(): void;
     /** Reveal the card with the final score and the stored best. Latches until restart. */
     showGameOver(finalScore: number, best: number, isBest: boolean): void;
     showStart(): void;
@@ -205,6 +207,15 @@ export function createHud(root: HTMLElement, objects: readonly HudObject[] = [])
         }
     }
 
+    function killCombo(): void {
+        clearTimeout(holdTimer);
+        clearTimeout(fadeTimer);
+        shownCombo = 0;
+        comboEl.hidden = true;
+        comboEl.classList.remove('hud-combo-fade');
+        comboEl.textContent = '';
+    }
+
     function showGameOver(finalScore: number, best: number, isBest: boolean): void {
         if (over) return;
 
@@ -272,6 +283,7 @@ export function createHud(root: HTMLElement, objects: readonly HudObject[] = [])
 
     return {
         sync,
+        killCombo,
         showGameOver,
         showStart,
         showPaused,

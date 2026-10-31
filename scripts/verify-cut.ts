@@ -141,6 +141,7 @@ console.log('Slicer');
     const pool = new Pool<SpawnedObject>(4, createSpawnedObject, resetSpawnedObject);
     const pieces: Array<{ defId: string; nx: number; ny: number; radius: number }> = [];
     const cuts: Array<{ defId: string; points: number }> = [];
+    let hazards = 0;
     const slicer = new Slicer({
         score,
         pieces: (parent, nx, ny) => {
@@ -148,6 +149,9 @@ console.log('Slicer');
         },
         onCut: (defId, points) => {
             cuts.push({ defId, points });
+        },
+        onHazard: () => {
+            hazards += 1;
         },
     });
 
@@ -170,9 +174,14 @@ console.log('Slicer');
     slicer.cut(pool, seg(-5, 0, 5, 0));
     check('restricted score is negative', score.total === 0, `total=${score.total}`);
 
+    stock(pool, 0, -2, 'bomb', 'hazard');
+    slicer.cut(pool, seg(-5, 0, 5, 0));
+    check('hazard cut reports through the callback', hazards === 1, `hazards=${hazards}`);
+    check('hazard score is negative', score.total === -2, `total=${score.total}`);
+
     stock(pool, 0, 1, 'pumpkin', 'target');
     check('a far segment changes nothing', slicer.cut(pool, seg(-5, 9, 5, 9)) === 0);
-    check('miss keeps the object and the score', pool.inUse === 1 && score.total === 0);
+    check('miss keeps the object and the score', pool.inUse === 1 && score.total === -2);
 
     // Vertical stroke: d = (0, 10) -> normal (-1, 0).
     pieces.length = 0;
@@ -182,7 +191,7 @@ console.log('Slicer');
         'onCut hook gets defId + points',
         cuts.at(-1)?.defId === 'pumpkin' && cuts.at(-1)?.points === 1,
     );
-    check('cuts counter accumulates', slicer.cuts === 3, `cuts=${slicer.cuts}`);
+    check('cuts counter accumulates', slicer.cuts === 4, `cuts=${slicer.cuts}`);
 
     // One segment, several objects; score sums each object's own def score.
     const multiScore = new Score();

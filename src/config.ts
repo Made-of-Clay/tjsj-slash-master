@@ -211,8 +211,7 @@ export const LIGHTING = {
 // [You] tunes both numbers.
 export const COMBO = {
     step: 2,
-    /** Seconds a chain stays open after its latest cut. */
-    window: 0.6,
+    windowSeconds: 0.6,
 } as const;
 
 // ===== EFFECTS =====

@@ -20,6 +20,8 @@ export interface SlicerConfig {
     pieces?: PieceSink;
     /** Optional dev hook (DEBUG_CUT): defId + points per cut. */
     onCut?: (defId: string, points: number) => void;
+    /** Fires once for each hazard cut. */
+    onHazard?: () => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export class Slicer {
     #score: Score;
     #pieces: PieceSink | undefined;
     #onCut: SlicerConfig['onCut'];
+    #onHazard: SlicerConfig['onHazard'];
     /** Cumulative objects cut — for harnesses and debug. */
     #cuts = 0;
 
@@ -46,6 +49,7 @@ export class Slicer {
         this.#score = config.score;
         this.#pieces = config.pieces;
         this.#onCut = config.onCut;
+        this.#onHazard = config.onHazard;
     }
 
     get cuts(): number {
@@ -88,6 +92,7 @@ export class Slicer {
             this.#score.add(object.score);
             this.#pieces?.(object, nx, ny);
             this.#onCut?.(object.defId, object.score);
+            if (object.category === 'hazard') this.#onHazard?.();
             pool.release(object);
             cutCount += 1;
         }

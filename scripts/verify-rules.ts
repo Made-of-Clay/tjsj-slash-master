@@ -286,28 +286,31 @@ console.log('Combo');
 {
     const combo = new Combo();
     check('the first cut of a chain banks nothing', combo.register(1) === 1);
-    check('a chain under the window banks, not pays', combo.step(COMBO.window / 2) === 0);
+    check('a chain under the window banks, not pays', combo.step(COMBO.windowSeconds / 2) === 0);
     check('the second cut banks one step', combo.register(1) === 2);
     check('the third cut banks two steps', combo.register(1) === 3);
     check('count tracks the chain', combo.count === 3, `count=${combo.count}`);
-    check('the window lapsing pays the whole bank', combo.step(COMBO.window) === COMBO.step * 3);
+    check(
+        'the window lapsing pays the whole bank',
+        combo.step(COMBO.windowSeconds) === COMBO.step * 3,
+    );
     check('the chain restarts after payout', combo.count === 0);
 
     // Regression: a pointer held down (no cut, no stroke end) farmed the
     // multiplier forever while the chain was keyed on the stroke.
-    check('a held pointer with no cuts pays nothing', combo.step(COMBO.window * 10) === 0);
+    check('a held pointer with no cuts pays nothing', combo.step(COMBO.windowSeconds * 10) === 0);
     check('the first cut after a lapse starts over', combo.register(1) === 1);
 
     // A 4-cut chain is the documented total: 0 + 1 + 2 + 3 steps = 6.
     const four = new Combo();
     check('a four-cut chain banks six steps', four.register(4) === 4);
-    check('the four-cut bank lands on expiry', four.step(COMBO.window) === COMBO.step * 6);
+    check('the four-cut bank lands on expiry', four.step(COMBO.windowSeconds) === COMBO.step * 6);
 
     const rhythm = new Combo();
     rhythm.register(1);
-    rhythm.step(COMBO.window * 0.9);
+    rhythm.step(COMBO.windowSeconds * 0.9);
     check('a cut inside the window keeps the chain open', rhythm.register(1) === 2);
-    check('the extended window pays nothing yet', rhythm.step(COMBO.window * 0.9) === 0);
+    check('the extended window pays nothing yet', rhythm.step(COMBO.windowSeconds * 0.9) === 0);
 
     // Fixed steps accumulate: 38 × 1/60 s > window.
     const stepped = new Combo();
@@ -318,11 +321,11 @@ console.log('Combo');
 
     const idle = new Combo();
     idle.register(1);
-    idle.step(COMBO.window * 0.9);
+    idle.step(COMBO.windowSeconds * 0.9);
     check('an empty register does not extend the window', idle.register(0) === 1);
     check(
         'the original window still lapses',
-        idle.step(COMBO.window * 0.2) === 0 && idle.count === 0,
+        idle.step(COMBO.windowSeconds * 0.2) === 0 && idle.count === 0,
     );
 
     const flushed = new Combo();
@@ -336,10 +339,13 @@ console.log('Combo');
     dropped.reset();
     check(
         'reset drops the chain and its bank',
-        dropped.count === 0 && dropped.step(COMBO.window * 2) === 0,
+        dropped.count === 0 && dropped.step(COMBO.windowSeconds * 2) === 0,
     );
 
-    check('COMBO.window is finite and positive', Number.isFinite(COMBO.window) && COMBO.window > 0);
+    check(
+        'COMBO.window is finite and positive',
+        Number.isFinite(COMBO.windowSeconds) && COMBO.windowSeconds > 0,
+    );
 }
 
 // ===== config =====

@@ -27,7 +27,7 @@ export class Combo {
             this.#count += 1;
             if (this.#count > 1) this.#bank += COMBO.step * (this.#count - 1);
         }
-        this.#remaining = COMBO.window;
+        this.#remaining = COMBO.windowSeconds;
         return this.#count;
     }
 

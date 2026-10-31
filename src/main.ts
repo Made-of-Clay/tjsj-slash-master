@@ -282,10 +282,14 @@ async function boot(): Promise<void> {
         }
     }
 
+    let hazardsCut = 0;
     const slicer = new Slicer({
         score,
         pieces: cutFeedback,
         onCut: DEBUG_CUT ? logCut : undefined,
+        onHazard: () => {
+            hazardsCut += 1;
+        },
     });
 
     // Discarded with the loop's backlog on a hidden tab, so a stale stroke
@@ -314,13 +318,19 @@ async function boot(): Promise<void> {
     function cutSwipe(segment: SwipeSegment): void {
         if (DEBUG_SWIPE) logSwipe(segment);
 
+        hazardsCut = 0;
         const cuts = slicer.cut(objects, segment);
         if (cuts > 0) {
             // Step 13: the blade brightens for a beat so the hit reads.
             bladeTrail.flash();
-            // Step 9B: the chain banks its own bonus; `combo.step` pays it out.
-            const count = combo.register(cuts);
-            if (count > 1) audio.play('combo', count);
+            if (hazardsCut > 0) {
+                combo.reset();
+                hud.killCombo();
+            } else {
+                // Step 9B: the chain banks its own bonus; `combo.step` pays it out.
+                const count = combo.register(cuts);
+                if (count > 1) audio.play('combo', count);
+            }
         }
     }
 
