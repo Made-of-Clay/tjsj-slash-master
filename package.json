@@ -27,11 +27,11 @@
   },
   "dependencies": {
     "stats.js": "^0.17.0",
-    "three": "^0.185.1"
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@types/stats.js": "^0.17.4",
-    "@types/three": "^0.185.0",
+    "@types/three": "^0.187.0",
     "oxfmt": "^0.62.0",
     "oxlint": "^1.72.0",
     "typescript": "^7.0.2",
