@@ -1,5 +1,10 @@
 # Slash Master
 
+
+TODO add point adjust at slash (+1 or -1 when slashing) for more obvious scoring feedback
+TODO improved sound effects during slashes, pops, chucks, etc.
+TODO occasional clock objects that add time
+
 Three.js Journey Challenge: Halloween (Oct 2026)
 
 Game mimicking fruit ninja for learning purposes and experimenting with basic 2.5D game.
