@@ -193,6 +193,43 @@ console.log('Slicer');
     );
     check('cuts counter accumulates', slicer.cuts === 4, `cuts=${slicer.cuts}`);
 
+    // Step 14: the popup anchor is the blade crossing, not the object centre.
+    const anchorPool = new Pool<SpawnedObject>(4, createSpawnedObject, resetSpawnedObject);
+    const anchors: Array<{ points: number; x: number; y: number }> = [];
+    const anchorSlicer = new Slicer({
+        score: new Score(),
+        cutPoint: (points, x, y) => {
+            anchors.push({ points, x, y });
+        },
+    });
+
+    stock(anchorPool, 0, 1, 'pumpkin', 'target');
+    anchorSlicer.cut(anchorPool, seg(-5, 0, 5, 0));
+    check(
+        'a through-center cut anchors at the crossing',
+        anchors.at(-1)?.x === 0 && anchors.at(-1)?.y === 0,
+    );
+    check('the anchor carries the object score', anchors.at(-1)?.points === 1);
+
+    stock(anchorPool, 0.6, -3, 'bomb', 'hazard');
+    anchorSlicer.cut(anchorPool, seg(0, -5, 0, 5));
+    check(
+        'the anchor sits on the segment, not the object centre',
+        anchors.at(-1)?.x === 0 && anchors.at(-1)?.y === 0,
+    );
+    check('a hazard anchor keeps its sign', anchors.at(-1)?.points === -3);
+
+    stock(anchorPool, 1.8, 1, 'pumpkin', 'target');
+    anchorSlicer.cut(anchorPool, seg(-1, 0, 1, 0));
+    check('t clamps the anchor to the segment end', anchors.at(-1)?.x === 1);
+
+    stock(anchorPool, 2.4, 1, 'pumpkin', 'target').position.set(2.4, 3, 0);
+    anchorSlicer.cut(anchorPool, seg(2, 3, 2, 3));
+    check(
+        'a zero-length segment anchors at its point',
+        anchors.at(-1)?.x === 2 && anchors.at(-1)?.y === 3,
+    );
+
     // One segment, several objects; score sums each object's own def score.
     const multiScore = new Score();
     const multiPool = new Pool<SpawnedObject>(4, createSpawnedObject, resetSpawnedObject);

@@ -254,6 +254,25 @@ export const SHAKE = {
     roll: 0.012,
 } as const;
 
+// ===== SCORE POPUPS =====
+// Cut feedback (step 14): a DOM label at the blade crossing point that rises
+// and fades. Screen pixels, not world units — the label is HUD chrome on its
+// own layer, so it costs no draw. [You] tunes the feel.
+export const SCORE_POPUP = {
+    /** Seconds the label takes to rise and fade out. */
+    duration: 1.5,
+    /** Upward travel over the lifetime, screen pixels. */
+    rise: 60,
+    /** Element ring; the oldest label is recycled on overflow. */
+    capacity: 24,
+    /** Edge clamp, screen pixels: a cut near the screen edge stays readable. */
+    margin: 24,
+    /** Positive adjustment: green, because orange read as damage. */
+    positiveColor: '#4ade80',
+    /** Negative adjustment: red, regardless of theme. */
+    negativeColor: '#ff4d5a',
+} as const;
+
 // ===== DEBUG =====
 // Bounds rectangle and other playfield debug. Vite folds this to `false` in the
 // production build, so the debug geometry is dropped from the bundle.

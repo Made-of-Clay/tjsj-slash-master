@@ -3,6 +3,7 @@ import {
     NeutralToneMapping,
     NoToneMapping,
     SRGBColorSpace,
+    Vector3,
     WebGPURenderer,
 } from 'three/webgpu';
 import type { ToneMapping } from 'three/webgpu';
@@ -12,6 +13,7 @@ import {
     CUT,
     DEBUG_CUT,
     EFFECTS,
+    GAME_PLANE_DEPTH,
     DEBUG_PERF,
     DEBUG_PLAYFIELD,
     DEBUG_SWIPE,
@@ -59,6 +61,7 @@ import { createSparkViews, syncSparkViews } from './rendering/SparkViews';
 import { createShake } from './rendering/Shake';
 import { Effects } from './game/Effects';
 import { createHud } from './ui/hud';
+import { createScorePopups } from './ui/scorePopups';
 import { createObjectIcons } from './ui/objectIcons';
 import { createRecords } from './ui/records';
 import { createAudio } from './audio/Audio';
@@ -201,14 +204,18 @@ async function boot(): Promise<void> {
     // Step 11: the cards' object legend. Thumbnails come from the theme's own
     // baked models, so they follow any content change without authored art.
     const icons = createObjectIcons(theme.objects);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const uiRoot = createUiRoot();
     const hud = createHud(
-        createUiRoot(),
+        uiRoot,
         theme.objects.map((def) => ({
             name: def.name,
             score: def.score,
             icon: icons.get(def.id) ?? null,
         })),
     );
+    // Step 14: cut numbers live on the DOM layer — no scene objects, no draw.
+    const scorePopups = createScorePopups(uiRoot, { reducedMotion });
     const records = createRecords();
     // Step 9D: boot waits on the start card; restart skips it.
     const flow = new Flow();
@@ -232,7 +239,7 @@ async function boot(): Promise<void> {
     // trail normalises it for additive headroom.
     const bladeTrail = createBladeTrail(scene, {
         tint: theme.palette.blade,
-        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        reducedMotion,
     });
     input.onStrokeStart((w) => bladeTrail.start(w));
     input.onStrokeMove((w) => bladeTrail.add(w));
@@ -287,6 +294,7 @@ async function boot(): Promise<void> {
         score,
         pieces: cutFeedback,
         onCut: DEBUG_CUT ? logCut : undefined,
+        cutPoint: showCutPopup,
         onHazard: () => {
             hazardsCut += 1;
         },
@@ -313,6 +321,19 @@ async function boot(): Promise<void> {
 
     function logCut(defId: string, points: number): void {
         console.info(`cut ${defId} ${points >= 0 ? '+' : ''}${points}`);
+    }
+
+    // World (play plane) → viewport pixels, reusing one vector per cut. The
+    // layer is viewport-fixed, so the canvas rect is the whole mapping.
+    const popupAnchor = new Vector3();
+    function showCutPopup(points: number, x: number, y: number): void {
+        popupAnchor.set(x, y, GAME_PLANE_DEPTH).project(camera);
+        const rect = canvas.getBoundingClientRect();
+        scorePopups.spawn(
+            points,
+            rect.left + (popupAnchor.x * 0.5 + 0.5) * rect.width,
+            rect.top + (-popupAnchor.y * 0.5 + 0.5) * rect.height,
+        );
     }
 
     function cutSwipe(segment: SwipeSegment): void {
@@ -374,6 +395,7 @@ async function boot(): Promise<void> {
         objects.releaseAll();
         debris.clear();
         effects.clear();
+        scorePopups.clear();
         shake.reset();
         swipes.clear();
         overShown = false;

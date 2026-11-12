@@ -101,6 +101,12 @@ Theme `spawnRules` (both themes; a theme owns these):
 | --------------------------- | --------- | --------------------------------------------------------- |
 | `COMBO.step`                | 2         | Bank per cut past the first; a 4-cut chain pays 6 × step. |
 | `COMBO.window`              | 0.6 s     | Time a chain stays open.                                  |
+| `SCORE_POPUP.duration`      | 1.5 s     | Rise + fade time.                                         |
+| `SCORE_POPUP.rise`          | 60 px     | Upward travel, screen px.                                 |
+| `SCORE_POPUP.capacity`      | 24        | Ring size; oldest recycled.                               |
+| `SCORE_POPUP.margin`        | 24 px     | Edge clamp, screen px.                                    |
+| `SCORE_POPUP.positiveColor` | `#4ade80` | Positive adjustment.                                      |
+| `SCORE_POPUP.negativeColor` | `#ff4d5a` | Negative adjustment.                                      |
 | `EFFECTS.capacity`          | 128       | Spark slots; oldest recycled.                             |
 | `EFFECTS.perCut`            | 7         | Sparks per cut.                                           |
 | `EFFECTS.life`              | 0.45 s    | Per-spark jitter applied.                                 |

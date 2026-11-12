@@ -86,6 +86,12 @@ Step 9 (polish):
 - `verify:perf`'s allocation guard now also covers `Effects.step`,
   `syncSparkViews` and `Shake.apply`.
 
+Step 14 (score popups):
+
+- `ScorePopups` — prebuilt DOM ring; `spawn` starts one WAAPI animation (event
+  path, like the audio voices) and `clear` cancels them. No per-frame JS, no DOM
+  writes while idle, no allocation in the steady frame.
+
 ## Rendering
 
 - Pixel ratio capped at 2. A 3x phone display is a 2.25x fragment cost for no
@@ -108,6 +114,8 @@ Step 9 (polish):
   `EFFECTS.capacity` (128) instances — 128 × 64 B = 8 KiB per category, ≤ 24
   KiB — drawn from one shared unit shard with instance scale carrying the size.
   No textures, no network, no per-frame geometry work.
+- Score popups are DOM on the HUD overlay (step 14): transform/opacity run on
+  the compositor, the scene gains no objects, and the ≤ 17 ceiling is unchanged.
 
 ## Payload
 

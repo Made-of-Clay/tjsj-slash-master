@@ -15,14 +15,14 @@ Rules: rows are permanent. A reversal gets a dated **superseded by** note on the
 
 ## Step 2 — playfield
 
-| ID  | Decision                                                                                                          |
-| --- | ----------------------------------------------------------------------------------------------------------------- |
-| 2A  | Straight-on modest perspective; `z = 0` is view-perpendicular, so fit math is exact.                              |
-| 2B  | Full-width aspect policy (supersedes fit-bounds): field spans screen width, `sideMargin` guards edges.           | 
-| 2C  | Background via `scene.backgroundNode` (TSL) — themeable, one fragment, no geometry.                              | 
-| 2D  | Height fixed, width from aspect (supersedes portrait-first): camera distance constant across devices.            | 
-| 2E  | No shadow maps — matches `PERF-BUDGET`.                                                                          | 
-| 2F  | Optional art: cover-fitted, cropped; no letterbox.                                                                |
+| ID  | Decision                                                                                               |
+| --- | ------------------------------------------------------------------------------------------------------ |
+| 2A  | Straight-on modest perspective; `z = 0` is view-perpendicular, so fit math is exact.                   |
+| 2B  | Full-width aspect policy (supersedes fit-bounds): field spans screen width, `sideMargin` guards edges. |
+| 2C  | Background via `scene.backgroundNode` (TSL) — themeable, one fragment, no geometry.                    |
+| 2D  | Height fixed, width from aspect (supersedes portrait-first): camera distance constant across devices.  |
+| 2E  | No shadow maps — matches `PERF-BUDGET`.                                                                |
+| 2F  | Optional art: cover-fitted, cropped; no letterbox.                                                     |
 
 ## Step 3 — launching
 
@@ -159,3 +159,12 @@ Rules: rows are permanent. A reversal gets a dated **superseded by** note on the
 | 13C | Tint = a theme colour, normalised to full brightness then mixed to white in `main.ts`; `rendering/` stays content-free. Superseded by 13E (2026-10-30). |
 | 13D | A cut flash widens + brightens; reduced motion skips fade and flash.                                                                                    |
 | 13E | `ThemePalette.blade` owns the blade hue: `background.top` gave both themes the same teal.                                                               |
+
+## Step 14 — score popups
+
+| ID  | Decision                                                                                                                                              |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 14A | Popups are DOM on `.ui-root` (prepended under the HUD): a prebuilt label ring with one WAAPI transform/opacity animation per cut.                     |
+| 14B | One popup per cut at the closest point on the swipe segment to the object centre; `Slicer.cutPoint` fires before `pool.release`.                      |
+| 14C | Rise + fade together over `SCORE_POPUP.duration`, `rise` px; reduced motion drops the lift, keeps the fade.                                           |
+| 14D | Positive = green `#4ade80`, negative = red `#ff4d5a`, both in config; the typographic minus is shared with the legend; the HUD keeps the combo total. |

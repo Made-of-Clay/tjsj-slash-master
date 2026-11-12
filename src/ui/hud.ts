@@ -1,3 +1,5 @@
+import { formatPoints } from './format';
+
 /**
  * HUD (steps 6 + 9): score, timer and combo on the ui-root overlay, the
  * start/pause/game-over cards, and the mute + pause controls. Takes primitives
@@ -42,11 +44,6 @@ interface Overlay {
     readonly root: HTMLElement;
     readonly card: HTMLButtonElement;
     readonly note: HTMLElement;
-}
-
-function formatPoints(score: number): string {
-    if (score === 0) return '0';
-    return score > 0 ? `+${score}` : `−${Math.abs(score)}`;
 }
 
 /** One row per slashable object: thumbnail, name, points. */

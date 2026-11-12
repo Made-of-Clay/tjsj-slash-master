@@ -20,6 +20,12 @@ export interface SlicerConfig {
     pieces?: PieceSink;
     /** Optional dev hook (DEBUG_CUT): defId + points per cut. */
     onCut?: (defId: string, points: number) => void;
+    /**
+     * Called per cut with the points and the closest point on the segment to
+     * the object centre — the blade crossing, on the play plane. Fires before
+     * the release zeroes the object.
+     */
+    cutPoint?: (points: number, x: number, y: number) => void;
     /** Fires once for each hazard cut. */
     onHazard?: () => void;
 }
@@ -41,6 +47,7 @@ export class Slicer {
     #score: Score;
     #pieces: PieceSink | undefined;
     #onCut: SlicerConfig['onCut'];
+    #cutPoint: SlicerConfig['cutPoint'];
     #onHazard: SlicerConfig['onHazard'];
     /** Cumulative objects cut — for harnesses and debug. */
     #cuts = 0;
@@ -49,6 +56,7 @@ export class Slicer {
         this.#score = config.score;
         this.#pieces = config.pieces;
         this.#onCut = config.onCut;
+        this.#cutPoint = config.cutPoint;
         this.#onHazard = config.onHazard;
     }
 
@@ -92,6 +100,17 @@ export class Slicer {
             this.#score.add(object.score);
             this.#pieces?.(object, nx, ny);
             this.#onCut?.(object.defId, object.score);
+            if (this.#cutPoint) {
+                let t = 0;
+                if (lengthSq > 0) {
+                    t =
+                        ((object.position.x - segment.from.x) * dx +
+                            (object.position.y - segment.from.y) * dy) /
+                        lengthSq;
+                    t = Math.min(1, Math.max(0, t));
+                }
+                this.#cutPoint(object.score, segment.from.x + dx * t, segment.from.y + dy * t);
+            }
             if (object.category === 'hazard') this.#onHazard?.();
             pool.release(object);
             cutCount += 1;

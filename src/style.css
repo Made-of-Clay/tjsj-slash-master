@@ -130,6 +130,36 @@ canvas {
     display: none;
 }
 
+/* Cut score popups (step 14): own layer under the HUD, viewport coordinates. */
+.score-popup-layer {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.score-popup {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%);
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--score-popup-positive, #4ade80);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.75);
+    will-change: transform, opacity;
+}
+
+.score-popup-negative {
+    color: var(--score-popup-negative, #ff4d5a);
+}
+
+.score-popup[hidden] {
+    display: none;
+}
+
 /* Fixed so a card covers the root's padding and centres on screen. */
 .overlay {
     position: fixed;
@@ -185,8 +215,9 @@ canvas {
 }
 
 .overlay-legend-item {
+    --item-size: 3rem;
     display: grid;
-    grid-template-columns: 1.9rem minmax(6rem, 1fr) auto;
+    grid-template-columns: var(--item-size) minmax(6rem, 1fr) auto;
     align-items: center;
     gap: 0.6rem;
 }
@@ -194,8 +225,8 @@ canvas {
 .overlay-legend-art {
     display: grid;
     place-items: center;
-    width: 1.9rem;
-    height: 1.9rem;
+    width: var(--item-size);
+    height: var(--item-size);
     border-radius: 50%;
     background: radial-gradient(circle, rgba(255, 255, 255, 0.13), transparent 72%);
 }
